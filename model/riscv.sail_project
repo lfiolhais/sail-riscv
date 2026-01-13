@@ -247,6 +247,14 @@ extensions {
     }
   }
 
+  L {
+    L_core {
+      before sys
+      files
+        extensions/L/lext_control.sail,
+    }
+  }
+
   vector_crypto {
     Zvk_core {
       requires V_core, K_core

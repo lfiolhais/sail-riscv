@@ -53,6 +53,10 @@ function clause hartSupports(Ext_D) = constraint(ext_d_supported) & hartSupports
 enum clause extension = Ext_B
 mapping clause extensionName = Ext_B <-> "b"
 function clause hartSupports(Ext_B) = config extensions.B.supported
+// HAC
+enum clause extension = Ext_L
+mapping clause extensionName = Ext_L <-> "l"
+function clause hartSupports(Ext_L) = config extensions.L.supported
 // Vector Operations
 enum clause extension = Ext_V
 mapping clause extensionName = Ext_V <-> "v"
