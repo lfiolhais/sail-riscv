@@ -180,6 +180,8 @@ bitfield Mstatus : bits(64) = {
   SXL  : 35 .. 34,
   UXL  : 33 .. 32,
 
+  ACES : 26 .. 25,
+
   //SDT  : 24,
   SPELP: 23,
   TSR  : 22,
@@ -220,6 +222,7 @@ private function legalize_mstatus(o : Mstatus, v : bits(64)) -> Mstatus = {
     // We don't support dynamic changes to SXL and UXL.
     // SXL = if xlen == 64 then v[SXL] else o[SXL],
     // UXL = if xlen == 64 then v[UXL] else o[UXL],
+    ACES = if hartSupports(Ext_L) then v[ACES] else 0b00,
     // SDT = v[SDT],
     SPELP = if hartSupports(Ext_Zicfilp) then v[SPELP] else 0b0,
     TSR = if currentlyEnabled(Ext_S) then v[TSR] else 0b0,
@@ -249,8 +252,9 @@ private function legalize_mstatus(o : Mstatus, v : bits(64)) -> Mstatus = {
   ];
 
   // Set dirty bit to OR of other status bits.
-  let dirty = extStatus_of_bits(o[FS]) == Dirty |
-              extStatus_of_bits(o[XS]) == Dirty |
+  let dirty = extStatus_of_bits(o[FS]) == Dirty   |
+              extStatus_of_bits(o[XS]) == Dirty   |
+              extStatus_of_bits(o[ACES]) == Dirty |
               extStatus_of_bits(o[VS]) == Dirty;
 
   [o with SD = bool_to_bits(dirty)]
@@ -724,6 +728,7 @@ bitfield Sstatus : bits(64) = {
   SD    : xlen - 1,
 
   UXL   : 33 .. 32,
+  ACES  : 26 .. 25,
 //  SDT   : 24,
   SPELP : 23,
   MXR   : 19,
@@ -743,6 +748,7 @@ private function lower_mstatus(m : Mstatus) -> Sstatus = {
   [s with
     SD = m[SD],
     UXL = m[UXL],
+    ACES = m[ACES],
     //SDT = m[SDT],
     SPELP = m[SPELP],
     MXR = m[MXR],
@@ -758,11 +764,12 @@ private function lower_mstatus(m : Mstatus) -> Sstatus = {
 
 private function lift_sstatus(m : Mstatus, s : Sstatus) -> Mstatus = {
   let dirty = extStatus_of_bits(s[FS]) == Dirty | extStatus_of_bits(s[XS]) == Dirty |
-              extStatus_of_bits(s[VS]) == Dirty;
+              extStatus_of_bits(s[VS]) == Dirty | extStatus_of_bits(s[ACES]) == Dirty;
 
   [m with
     SD = bool_to_bits(dirty),
     UXL = s[UXL],
+    ACES = s[ACES],
     //SDT = s[SDT],
     SPELP = s[SPELP],
     MXR = s[MXR],
