@@ -13,6 +13,7 @@ core {
     core/xlen.sail,
     core/flen.sail,
     core/vlen.sail,
+    core/llen.sail,
     core/mem_addrtype.sail,
     core/mem_metadata.sail,
     core/phys_mem_interface.sail,
@@ -251,7 +252,10 @@ extensions {
     L_core {
       before sys
       files
-        extensions/L/lext_control.sail,
+        extensions/L/lreg_type.sail,
+        extensions/L/lext_regs.sail,
+        extensions/L/lext_control.sail
+    }
     }
   }
 

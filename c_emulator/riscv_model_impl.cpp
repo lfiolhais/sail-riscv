@@ -107,6 +107,20 @@ unit ModelImpl::vreg_write_callback(unsigned reg, lbits value) {
   return UNIT;
 }
 
+unit ModelImpl::lreg_write_callback(unsigned reg, lbits value) {
+  for (auto c : m_callbacks) {
+    c->lreg_write_callback(*this, reg, value);
+  }
+  return UNIT;
+}
+
+unit ModelImpl::lmreg_write_callback(unsigned reg, lbits value) {
+  for (auto c : m_callbacks) {
+    c->lmreg_write_callback(*this, reg, value);
+  }
+  return UNIT;
+}
+
 unit ModelImpl::pc_write_callback(sbits new_pc) {
   for (auto c : m_callbacks) {
     c->pc_write_callback(*this, new_pc);

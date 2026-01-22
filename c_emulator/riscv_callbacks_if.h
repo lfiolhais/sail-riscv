@@ -40,6 +40,10 @@ public:
 
   virtual void vreg_write_callback(hart::Model &model, unsigned reg, lbits value);
 
+  virtual void lreg_write_callback(hart::Model &model, unsigned reg, lbits value);
+
+  virtual void lmreg_write_callback(hart::Model &model, unsigned reg, lbits value);
+
   virtual void pc_write_callback(hart::Model &model, sbits new_pc);
 
   virtual void redirect_callback(hart::Model &model, sbits new_pc);

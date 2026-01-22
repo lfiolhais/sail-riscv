@@ -43,6 +43,10 @@ public:
 
   virtual unit vreg_write_callback(unsigned reg, lbits value);
 
+  virtual unit lreg_write_callback(unsigned reg, lbits value);
+
+  virtual unit lmreg_write_callback(unsigned reg, lbits value);
+
   virtual unit pc_write_callback(sbits new_pc);
 
   virtual unit redirect_callback(sbits new_pc);

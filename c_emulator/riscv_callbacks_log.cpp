@@ -112,6 +112,20 @@ void log_callbacks::vreg_write_callback(hart::Model &, unsigned reg, lbits value
   }
 }
 
+void log_callbacks::lreg_write_callback(hart::Model &, unsigned reg, lbits value) {
+  if (trace_log != nullptr && config_print_reg) {
+    fprintf(trace_log, "l%d <- 0x", reg);
+    print_lbits_hex(trace_log, value);
+  }
+}
+
+void log_callbacks::lmreg_write_callback(hart::Model &, unsigned reg, lbits value) {
+  if (trace_log != nullptr && config_print_reg) {
+    fprintf(trace_log, "(Internal) lm%d <- 0x", reg);
+    print_lbits_hex(trace_log, value);
+  }
+}
+
 // Page table walk callback
 void log_callbacks::ptw_start_callback(
   hart::Model &model,

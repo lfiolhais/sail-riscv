@@ -39,6 +39,8 @@ private:
   unit csr_full_write_callback(const_sail_string csr_name, unsigned reg, sbits value) override;
   unit csr_full_read_callback(const_sail_string csr_name, unsigned reg, sbits value) override;
   unit vreg_write_callback(unsigned reg, lbits value) override;
+  unit lreg_write_callback(unsigned reg, lbits value) override;
+  unit lmreg_write_callback(unsigned reg, lbits value) override;
   unit pc_write_callback(sbits new_pc) override;
   unit redirect_callback(sbits new_pc) override;
   unit trap_callback(bool is_interrupt, fbits cause) override;

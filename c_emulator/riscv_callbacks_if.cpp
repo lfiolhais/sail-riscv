@@ -78,6 +78,20 @@ void callbacks_if::vreg_write_callback(
 ) {
 }
 
+void callbacks_if::lreg_write_callback(
+  [[maybe_unused]] hart::Model &model,
+  [[maybe_unused]] unsigned reg,
+  [[maybe_unused]] lbits value
+) {
+}
+
+void callbacks_if::lmreg_write_callback(
+  [[maybe_unused]] hart::Model &model,
+  [[maybe_unused]] unsigned reg,
+  [[maybe_unused]] lbits value
+) {
+}
+
 void callbacks_if::pc_write_callback([[maybe_unused]] hart::Model &model, [[maybe_unused]] sbits new_pc) {
 }
 

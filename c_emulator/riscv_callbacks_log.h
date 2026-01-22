@@ -22,6 +22,8 @@ public:
   void csr_full_write_callback(hart::Model &model, const_sail_string csr_name, unsigned reg, sbits value) override;
   void csr_full_read_callback(hart::Model &model, const_sail_string csr_name, unsigned reg, sbits value) override;
   void vreg_write_callback(hart::Model &model, unsigned reg, lbits value) override;
+  void lreg_write_callback(hart::Model &model, unsigned reg, lbits value) override;
+  void lmreg_write_callback(hart::Model &model, unsigned reg, lbits value) override;
   // Page table walk callback
   void ptw_start_callback(
     hart::Model &model,

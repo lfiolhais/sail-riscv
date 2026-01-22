@@ -195,6 +195,9 @@
       "vl_use_ceil": false
     },
     "L": {
+      "supported": true,
+      "llen_exp": @CONFIG__L__LLEN_EXP@
+    },
       "supported": true
     },
     "B": {

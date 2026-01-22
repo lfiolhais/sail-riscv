@@ -69,6 +69,14 @@ unit PlatformInterface::vreg_write_callback([[maybe_unused]] unsigned reg, [[may
   return UNIT;
 }
 
+unit PlatformInterface::lreg_write_callback([[maybe_unused]] unsigned reg, [[maybe_unused]] lbits value) {
+  return UNIT;
+}
+
+unit PlatformInterface::lmreg_write_callback([[maybe_unused]] unsigned reg, [[maybe_unused]] lbits value) {
+  return UNIT;
+}
+
 unit PlatformInterface::pc_write_callback([[maybe_unused]] sbits new_pc) {
   return UNIT;
 }
