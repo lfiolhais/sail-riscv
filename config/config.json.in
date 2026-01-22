@@ -198,6 +198,7 @@
       "supported": true,
       "llen_exp": @CONFIG__L__LLEN_EXP@
     },
+    "Zleaes128p": {
       "supported": true
     },
     "B": {

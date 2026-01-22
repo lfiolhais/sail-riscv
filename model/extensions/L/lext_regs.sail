@@ -188,3 +188,33 @@ function wL_bits(i: lregidx, data: llenbits) -> unit = {
 
 overload L =  {rL_bits, wL_bits, rL, wL}
 
+// HAC CSRs
+register aceerror : xlenbits
+register acestart : xlenbits
+
+mapping clause csr_name_map = 0x800  <-> "aceerror"
+mapping clause csr_name_map = 0x801  <-> "acestart"
+
+function clause is_CSR_accessible(0x800, _, _) = currentlyEnabled(Ext_L) // aceerror
+function clause is_CSR_accessible(0x801, _, _) = currentlyEnabled(Ext_L) // acestart
+
+function clause read_CSR(0x800) = aceerror
+function clause read_CSR(0x801) = acestart
+
+// Note: The spec recommends trapping if acestart is out of bounds but the
+// current implementation does not yet do that.
+
+function set_acestart(value : bits(16)) -> unit = {
+  dirty_l_context();
+  acestart = zero_extend(value[(llen_exp - 1) .. 0]);
+  csr_write_callback("acestart", acestart);
+}
+
+function set_aceerror(value : bits(8)) -> unit = {
+  dirty_l_context();
+  aceerror = zero_extend(value);
+  csr_write_callback("aceerror", aceerror);
+}
+
+function clause write_CSR(0x800, value) = { set_aceerror(value[7 .. 0]); Ok(aceerror) }
+function clause write_CSR(0x801, value) = { set_acestart(value[15 .. 0]); Ok(acestart) }

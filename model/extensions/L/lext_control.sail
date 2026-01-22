@@ -6,4 +6,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
 // =======================================================================================
 
-function clause currentlyEnabled(Ext_L) = hartSupports(Ext_L) & (misa[L] == 0b1)
+function clause currentlyEnabled(Ext_Zleaes128p) = hartSupports(Ext_Zleaes128p)
+function clause currentlyEnabled(Ext_L) = hartSupports(Ext_L) & (misa[L] == 0b1) & (mstatus[ACES] != 0b00) & currentlyEnabled(Ext_Zicsr) & currentlyEnabled(Ext_Zleaes128p)

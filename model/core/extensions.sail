@@ -56,7 +56,7 @@ function clause hartSupports(Ext_B) = config extensions.B.supported
 // HAC
 enum clause extension = Ext_L
 mapping clause extensionName = Ext_L <-> "l"
-function clause hartSupports(Ext_L) = config extensions.L.supported
+function clause hartSupports(Ext_L) = sizeof(vlen_exp) >= 7 & config extensions.L.supported
 // Vector Operations
 enum clause extension = Ext_V
 mapping clause extensionName = Ext_V <-> "v"
@@ -274,6 +274,11 @@ enum clause extension = Ext_Zkt
 mapping clause extensionName = Ext_Zkt <-> "zkt"
 function clause hartSupports(Ext_Zkt) = config extensions.Zkt.supported
 function clause currentlyEnabled(Ext_Zkt) = hartSupports(Ext_Zkt)
+
+// Standard HAC Extensions
+enum clause extension = Ext_Zleaes128p
+mapping clause extensionName = Ext_Zleaes128p <-> "zleaes128p"
+function clause hartSupports(Ext_Zleaes128p) = sizeof(llen_exp) >= 7
 
 // Floating-Point in Integer Registers (half precision)
 enum clause extension = Ext_Zhinx
@@ -520,6 +525,7 @@ function currentlyEnabled_measure(ext : extension) -> int =
     Ext_Zvl128b => 0,
     Ext_Zvl32b => 0,
     Ext_Zvl64b => 0,
+    Ext_Zleaes128p => 0,
 
     Ext_D => 1, // > Zicsr
     Ext_F => 1, // > Zicsr
@@ -550,6 +556,7 @@ function currentlyEnabled_measure(ext : extension) -> int =
     Ext_Zvfbfmin => 3, // > Zve32f
     Ext_Zvkb => 3, // > Zvbb
     Ext_Zvknhb => 3, // > Zve64x
+    Ext_L => 3, // > Zicsr & > Zleaes128p
 
     Ext_H => 4, // > virtual_mem_supported
     Ext_Zve64d => 4, // > Zve64f
@@ -577,6 +584,7 @@ let extensions_ordered_for_isa_string = [
   // Ext_P,
   Ext_V,
   Ext_H,
+  Ext_L,
   // S and U are not valid extensions in the device-tree, whereas H is.
 
   // Z extensions, ordered by category and then alphabetically.
@@ -683,6 +691,9 @@ let extensions_ordered_for_isa_string = [
   Ext_Zvl256b,
   Ext_Zvl512b,
   Ext_Zvl1024b,
+
+  // Zl
+  Ext_Zleaes128p,
 
   // Supervisor extensions, ordered alphabetically.
   Ext_Sscofpmf,
