@@ -188,6 +188,209 @@ function wL_bits(i: lregidx, data: llenbits) -> unit = {
 
 overload L =  {rL_bits, wL_bits, rL, wL}
 
+// Metadata registers
+
+register lrm0 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm1 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm2 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm3 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm4 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm5 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm6 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm7 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm8 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm9 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm10 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm11 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm12 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm13 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm14 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm15 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm16 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm17 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm18 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm19 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm20 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm21 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm22 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm23 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm24 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm25 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm26 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm27 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm28 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm29 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm30 : Lmetadata = Mk_Lmetadata(zeros())
+register lrm31 : Lmetadata = Mk_Lmetadata(zeros())
+
+function l_get_sibling (lrm : Lmetadata, Lregno(sibling_id) : lregno) -> lregidx = {
+  match sibling_id {
+    0  => Lregidx(lrm[_sibling_0]),
+    1  => Lregidx(lrm[_sibling_1]),
+    2  => Lregidx(lrm[_sibling_2]),
+    3  => Lregidx(lrm[_sibling_3]),
+    4  => Lregidx(lrm[_sibling_4]),
+    5  => Lregidx(lrm[_sibling_5]),
+    6  => Lregidx(lrm[_sibling_6]),
+    7  => Lregidx(lrm[_sibling_7]),
+    8  => Lregidx(lrm[_sibling_8]),
+    9  => Lregidx(lrm[_sibling_9]),
+    10 => Lregidx(lrm[_sibling_10]),
+    11 => Lregidx(lrm[_sibling_11]),
+    12 => Lregidx(lrm[_sibling_12]),
+    13 => Lregidx(lrm[_sibling_13]),
+    14 => Lregidx(lrm[_sibling_14]),
+    15 => Lregidx(lrm[_sibling_15]),
+    16 => Lregidx(lrm[_sibling_16]),
+    17 => Lregidx(lrm[_sibling_17]),
+    18 => Lregidx(lrm[_sibling_18]),
+    19 => Lregidx(lrm[_sibling_19]),
+    20 => Lregidx(lrm[_sibling_20]),
+    21 => Lregidx(lrm[_sibling_21]),
+    22 => Lregidx(lrm[_sibling_22]),
+    23 => Lregidx(lrm[_sibling_23]),
+    24 => Lregidx(lrm[_sibling_24]),
+    25 => Lregidx(lrm[_sibling_25]),
+    26 => Lregidx(lrm[_sibling_26]),
+    27 => Lregidx(lrm[_sibling_27]),
+    28 => Lregidx(lrm[_sibling_28]),
+    29 => Lregidx(lrm[_sibling_29]),
+    30 => Lregidx(lrm[_sibling_30]),
+    31 => Lregidx(lrm[_sibling_31]),
+  }
+}
+
+function rmL (Lregno(r) : lregno) -> Lmetadata = {
+  match r {
+    0  => lrm0,
+    1  => lrm1,
+    2  => lrm2,
+    3  => lrm3,
+    4  => lrm4,
+    5  => lrm5,
+    6  => lrm6,
+    7  => lrm7,
+    8  => lrm8,
+    9  => lrm9,
+    10 => lrm10,
+    11 => lrm11,
+    12 => lrm12,
+    13 => lrm13,
+    14 => lrm14,
+    15 => lrm15,
+    16 => lrm16,
+    17 => lrm17,
+    18 => lrm18,
+    19 => lrm19,
+    20 => lrm20,
+    21 => lrm21,
+    22 => lrm22,
+    23 => lrm23,
+    24 => lrm24,
+    25 => lrm25,
+    26 => lrm26,
+    27 => lrm27,
+    28 => lrm28,
+    29 => lrm29,
+    30 => lrm30,
+    31 => lrm31,
+  }
+}
+
+val lmreg_write_callback = pure {cpp: "lmreg_write_callback"} : (lregidx, bits(235)) -> unit
+function lmreg_write_callback(_) = ()
+
+function wmL (Lregno(r) : lregno, m : Lmetadata) -> unit = {
+  match r {
+    0  => lrm0  = m,
+    1  => lrm1  = m,
+    2  => lrm2  = m,
+    3  => lrm3  = m,
+    4  => lrm4  = m,
+    5  => lrm5  = m,
+    6  => lrm6  = m,
+    7  => lrm7  = m,
+    8  => lrm8  = m,
+    9  => lrm9  = m,
+    10 => lrm10 = m,
+    11 => lrm11 = m,
+    12 => lrm12 = m,
+    13 => lrm13 = m,
+    14 => lrm14 = m,
+    15 => lrm15 = m,
+    16 => lrm16 = m,
+    17 => lrm17 = m,
+    18 => lrm18 = m,
+    19 => lrm19 = m,
+    20 => lrm20 = m,
+    21 => lrm21 = m,
+    22 => lrm22 = m,
+    23 => lrm23 = m,
+    24 => lrm24 = m,
+    25 => lrm25 = m,
+    26 => lrm26 = m,
+    27 => lrm27 = m,
+    28 => lrm28 = m,
+    29 => lrm29 = m,
+    30 => lrm30 = m,
+    31 => lrm31 = m,
+  };
+
+  lmreg_write_callback(lregno_to_lregidx(Lregno(r)), m.bits);
+}
+
+function rmL_bits(i: lregidx) -> Lmetadata = rmL(lregidx_to_lregno(i))
+
+function wmL_bits(i: lregidx, data: Lmetadata) -> unit = {
+  wmL(lregidx_to_lregno(i)) = data
+}
+
+overload Lm =  {rmL_bits, wmL_bits, rmL, wmL}
+
+function l_dealloc_siblings(r : lregno) -> unit = {
+    let lrm = rmL(r);
+    let n_siblings = unsigned(lrm[_n_siblings]);
+
+    dirty_l_context();
+
+    foreach (i from 0 to (n_siblings - 1)) {
+        let lrm_sibling_id = l_get_sibling(lrm, Lregno(i));
+        let lrm_sibling = [ Mk_Lmetadata(zeros()) with
+            _allocated = bitzero,
+            _n_siblings = to_bits(5, 0),
+        ];
+        wmL_bits(lrm_sibling_id, lrm_sibling);
+    }
+}
+
+function l_dealloc_siblings_bits(i: lregidx) -> unit = l_dealloc_siblings(lregidx_to_lregno(i))
+
+function l_set_data(lrm: Lmetadata, data: xlenbits, upper: bool) -> Lmetadata = {
+    var out = lrm;
+
+    if xlen == 64 then {
+        out[UC_Policy_4] = data[61 .. 48];
+        out[UC_Policy_3] = data[47 .. 32];
+    } else if xlen == 32 & upper then {
+        out[UC_Policy_4] = data[29 .. 16];
+        out[UC_Policy_3] = data[15 ..  0];
+    };
+
+    if xlen== 64 | (xlen== 32 & not(upper)) then {
+        out[UC_Policy_2]      = data[31 .. 30];
+        out[UC_Policy_1]      = data[29 .. 26];
+        out[State_Number]     = data[25 .. 22];
+        out[Key_Type]         = data[21 .. 20];
+        out[Direction_Policy] = data[19 .. 18];
+        out[SC_Protection]    = data[17 .. 16];
+        out[Algorithm]        = data[14 .. 6];
+        out[Locality]         = data[4 .. 1];
+        out[Format]           = data[0];
+    };
+
+    return out;
+}
+
 // HAC CSRs
 register aceerror : xlenbits
 register acestart : xlenbits
