@@ -61,3 +61,12 @@ mapping clause encdec = ACESIZE_F1(xs, xd)
 
 mapping clause assembly = ACESIZE_F1(xs, xd)
   <-> "ace.size" ^ spc() ^ reg_name(xd) ^ sep()  ^ reg_name(xs)
+
+union clause instruction = ACESIZE_F2: (regidx, regidx)
+
+mapping clause encdec = ACESIZE_F2(xs, xd)
+  <-> 0b00 @ 0b10 @ 0b0 @ 0b0 @ 0b1 @ 0b00000 @ encdec_reg(xs) @ 0b000 @ encdec_reg(xd) @ 0b1011011
+  when (currentlyEnabled(Ext_L))
+
+mapping clause assembly = ACESIZE_F2(xs, xd)
+  <-> "ace.size.internal" ^ spc() ^ reg_name(xd) ^ sep()  ^ reg_name(xs)
