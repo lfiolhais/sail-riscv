@@ -253,9 +253,15 @@ extensions {
       before sys
       files
         extensions/L/lreg_type.sail,
-        extensions/L/lext_regs.sail,
-        extensions/L/lext_control.sail
+        extensions/L/lext_control.sail,
+        extensions/L/lext_regs.sail
     }
+
+    L_instructions {
+      requires sys, I, L_core
+      files
+        extensions/L/lext_base_insts.sail,
+        extensions/L/l_ace_init.sail
     }
   }
 

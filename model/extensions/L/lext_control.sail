@@ -9,7 +9,7 @@
 function clause currentlyEnabled(Ext_Zleaes128p) = hartSupports(Ext_Zleaes128p)
 function clause currentlyEnabled(Ext_L) = hartSupports(Ext_L) & (misa[L] == 0b1) & (mstatus[ACES] != 0b00) & currentlyEnabled(Ext_Zicsr) & currentlyEnabled(Ext_Zleaes128p)
 
-function is_algorithm_supported(algo: bits(9)) -> bool = {
+function is_algorithm_supported(algo: bits(11)) -> bool = {
     let algo_type = acealgorithmType_bits(algo[3..0]);
     let algo_mode = acealgorithmModeType_bits(algo[7..4]);
     print_log("Algo Type " ^ bits_str(algo[3..0]) ^ "; Algo Mode " ^ bits_str(algo[7..4]));
@@ -21,7 +21,7 @@ function is_algorithm_supported(algo: bits(9)) -> bool = {
 }
 
 // Return size of algorithm in bits
-function algorithm_size(algo: bits(9)) -> int = {
+function algorithm_size(algo: bits(11)) -> int = {
     let algo_type = acealgorithmType_bits(algo[3..0]);
     let algo_mode = acealgorithmModeType_bits(algo[7..4]);
 

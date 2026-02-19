@@ -58,38 +58,43 @@ bitfield Lmetadata : bits(235) = {
     _allocated  : 64,
 
     // Public Metadata (Architectural)
-    UC_Policy_4     : 61 .. 48,
-    UC_Policy_3     : 47 .. 32,
-    UC_Policy_2     : 31 .. 30,
-    UC_Policy_1     : 29 .. 26,
+    ExpirationDate : 63 .. 46,
+    ExtraContent   : 45 .. 32,
 
-    State_Number    : 25 .. 22,
-    Key_Type        : 21 .. 20,
-    Direction_Policy: 19 .. 18,
-    SC_Protection   : 17 .. 16,
-    Algorithm       : 14 .. 6,
-    Locality        : 4 .. 1,
-    Format          : 0
+    UC_Policy      : 31 .. 29,
+    Locality       : 28 .. 21,
+    State_Number   : 20 .. 17,
+    KeyType        : 16 .. 16,
+    SC_Protection  : 15 .. 14,
+    DirectionPolicy: 13 .. 12,
+    Algorithm      : 11 .. 1,
+    Format         : 0
 }
 
-union AceErrorType = {
-    E_Ok             : unit,
-    E_Authentication : unit,
-    E_Privilege      : unit,
-    E_Invalid        : unit,
-    E_Unimplemented  : unit,
-    E_Memory         : unit,
-    E_Unconfigured   : unit
+enum AceErrorType = {
+    ACEE_NoError,
+    ACEE_ImportAuthentication,
+    ACEE_Unconfigured,
+    ACEE_InvalidCR,
+    ACEE_ExpiredCR,
+    ACEE_Memory,
+    ACEE_Unimplemented,
+    ACEE_InvalidValue,
+    ACEE_Privilege,
+    ACEE_Authentication
 }
 
 mapping aceerrorType_bits : AceErrorType <-> bits(8) = {
-  E_Ok()             <-> 0b00000000, // 0
-  E_Authentication() <-> 0b00000001, // 1
-  E_Privilege()      <-> 0b00000010, // 2
-  E_Invalid()        <-> 0b00000011, // 3
-  E_Unimplemented()  <-> 0b00000100, // 4
-  E_Memory()         <-> 0b00000101, // 5
-  E_Unconfigured()   <-> 0b00000110, // 6
+  ACEE_NoError              <-> 0b00000000, // 0
+  ACEE_ImportAuthentication <-> 0b00000001, // 1
+  ACEE_Unconfigured         <-> 0b00000010, // 2
+  ACEE_InvalidCR            <-> 0b00000011, // 3
+  ACEE_ExpiredCR            <-> 0b00000100, // 4
+  ACEE_Memory               <-> 0b00000101, // 5
+  ACEE_Unimplemented        <-> 0b00000110, // 6
+  ACEE_InvalidValue         <-> 0b00000111, // 7
+  ACEE_Privilege            <-> 0b00001000, // 8
+  ACEE_Authentication       <-> 0b00001001, // 9
 }
 
 enum AceMetadataFormatType = {
@@ -104,16 +109,12 @@ mapping acemetadataformatType_bits : AceMetadataFormatType <-> bits(1) = {
 
 enum AceKeyType = {
     ACEK_Explicit,
-    ACEK_System,
-    ACEK_Internal,
-    ACEK_Invalid
+    ACEK_System
 }
 
-mapping acekeyType_bits : AceKeyType <-> bits(2) = {
-  ACEK_Explicit <-> 0b00, // 0
-  ACEK_System   <-> 0b01, // 1
-  ACEK_Internal <-> 0b10, // 2
-  ACEK_Invalid  <-> 0b11, // 3
+mapping acekeyType_bits : AceKeyType <-> bits(1) = {
+  ACEK_Explicit <-> 0b0, // 0
+  ACEK_System   <-> 0b1  // 1
 }
 
 enum AceAlgorithmType = {
@@ -181,4 +182,30 @@ mapping acealgorithmModeType_bits : AceAlgorithmModeType <-> bits(4) = {
     ACEAM_H_SHAKE128  <-> 0b1100,
     ACEAM_H_SHAKE256  <-> 0b1101,
     ACEAM_HC_None     <-> 0b1111
+}
+
+enum AceSCProtectionType = {
+    ACESC_NoProtection,
+    ACESC_DIELThreshold,
+    ACESC_DIELThresholdFault,
+    ACESC_Custom
+}
+
+mapping acescprotectionType_bits : AceSCProtectionType <-> bits(2) = {
+  ACESC_NoProtection       <-> 0b00, // 0
+  ACESC_DIELThreshold      <-> 0b01, // 1
+  ACESC_DIELThresholdFault <-> 0b10, // 2
+  ACESC_Custom             <-> 0b11  // 3
+}
+
+enum AceStateNumberType = {
+    ACESN_Initial,
+    ACESN_Invalid,
+    ACESN_Completed
+}
+
+mapping acestatenumberType_bits : AceStateNumberType <-> bits(4) = {
+  ACESN_Initial   <-> 0b0000, // 0
+  ACESN_Invalid   <-> 0b1110, // 14
+  ACESN_Completed <-> 0b1111  // 15
 }

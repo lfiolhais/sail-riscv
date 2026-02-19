@@ -365,26 +365,45 @@ function l_dealloc_siblings(r : lregno) -> unit = {
 
 function l_dealloc_siblings_bits(i: lregidx) -> unit = l_dealloc_siblings(lregidx_to_lregno(i))
 
+function lrm_dealloc(kd: lregidx) -> Lmetadata = {
+  // Zero internal `_allocated` flag
+  Lm(kd) = [Lm(kd) with _allocated = bitzero];
+  // Read the metadata register but now the register is no longer allocated
+  let lrm = Lm(kd);
+
+  // Check if `lrm` is already allocated and has siblings. If it is, invalidate
+  // all other siblings.
+  if lrm[_allocated] == bitone & unsigned(lrm[_n_siblings]) != 0 then {
+      l_dealloc_siblings_bits(kd);
+  };
+
+  assert(lrm[_allocated] == bitzero);
+  assert(unsigned(lrm[_n_siblings]) == 0);
+
+  dirty_l_context();
+
+  lrm
+}
+
 function l_set_data(lrm: Lmetadata, data: xlenbits, upper: bool) -> Lmetadata = {
     var out = lrm;
 
     if xlen == 64 then {
-        out[UC_Policy_4] = data[61 .. 48];
-        out[UC_Policy_3] = data[47 .. 32];
+        out[ExpirationDate] = data[63 .. 46];
+        out[ExtraContent]   = data[45 .. 32];
     } else if xlen == 32 & upper then {
-        out[UC_Policy_4] = data[29 .. 16];
-        out[UC_Policy_3] = data[15 ..  0];
+        out[ExpirationDate] = data[31 .. 14];
+        out[ExtraContent]   = data[13 ..  0];
     };
 
     if xlen== 64 | (xlen== 32 & not(upper)) then {
-        out[UC_Policy_2]      = data[31 .. 30];
-        out[UC_Policy_1]      = data[29 .. 26];
-        out[State_Number]     = data[25 .. 22];
-        out[Key_Type]         = data[21 .. 20];
-        out[Direction_Policy] = data[19 .. 18];
-        out[SC_Protection]    = data[17 .. 16];
-        out[Algorithm]        = data[14 .. 6];
-        out[Locality]         = data[4 .. 1];
+        out[UC_Policy]        = data[31 .. 29];
+        out[Locality]         = data[28 .. 21];
+        out[State_Number]     = data[20 .. 17];
+        out[KeyType]          = data[16 .. 16];
+        out[SC_Protection]    = data[15 .. 14];
+        out[DirectionPolicy]  = data[13 .. 12];
+        out[Algorithm]        = data[11 .. 1];
         out[Format]           = data[0];
     };
 
@@ -421,3 +440,72 @@ function set_aceerror(value : bits(8)) -> unit = {
 
 function clause write_CSR(0x800, value) = { set_aceerror(value[7 .. 0]); Ok(aceerror) }
 function clause write_CSR(0x801, value) = { set_acestart(value[15 .. 0]); Ok(acestart) }
+
+// Validates the metadata in register with index `kd` and sets `ace_error` accordingly.
+// Returns true if there is an error.
+function has_metadata_error(kd: lregidx) -> bool = {
+  // Read register again so that we are inspecting the new metadata
+  let lrm = Lm(kd);
+
+  // Check metadata validity: Check format
+  let format = acemetadataformatType_bits(lrm[Format]);
+  if format != ACEM_Std then {
+     set_aceerror(aceerrorType_bits(ACEE_InvalidValue));
+     return true;
+  };
+
+  // Check metadata validity: Key Type field must be Explicit
+  let key_type = acekeyType_bits(lrm[KeyType]);
+  if key_type != ACEK_Explicit then {
+     print_log("Key type isn't explicit");
+     set_aceerror(aceerrorType_bits(ACEE_InvalidValue));
+     return true;
+  };
+
+  // Check metadata validity: "State_Number" field must be `ace_state_initial`.
+  let state_number = acestatenumberType_bits(lrm[State_Number]);
+  if state_number != ACESN_Initial then {
+     print_log("State Number isn't initial");
+     set_aceerror(aceerrorType_bits(ACEE_InvalidValue));
+     return true;
+  };
+
+  // Check metadata validity: algorithm is supported
+  if not(is_algorithm_supported(lrm[Algorithm])) then {
+     print_log("Failed algo check");
+     set_aceerror(aceerrorType_bits(ACEE_Unimplemented));
+     return true;
+  };
+
+  // Check metadata validity: SCProtection can be honored by hardware
+  let sc_protection = acescprotectionType_bits(lrm[SC_Protection]);
+  if sc_protection != ACESC_NoProtection then {
+     print_log("Failed SCProtection check");
+     set_aceerror(aceerrorType_bits(ACEE_InvalidValue));
+     return true;
+  };
+
+  // TODO Implement Locality checks
+
+  // Check metadata validity: "Usage Control Policies" field:
+  let uc_policy = lrm[UC_Policy];
+  let error : bool = match cur_privilege {
+     User              => not(bit_to_bool(uc_policy[0])),
+     Supervisor        => not(currentlyEnabled(Ext_S)) | not(bit_to_bool(uc_policy[1])),
+     Machine           => false,
+     VirtualUser       => internal_error(__FILE__, __LINE__, "Hypervisor extension not supported"),
+     VirtualSupervisor => internal_error(__FILE__, __LINE__, "Hypervisor extension not supported"),
+  };
+  if error then {
+     print_log("Failed Privilege Level check");
+     set_aceerror(aceerrorType_bits(ACEE_Privilege));
+     return true;
+  };
+
+  // TODO Implement ExtraContent checks
+
+  // TODO Implement ExpirationDate checks
+
+  return false;
+}
+
