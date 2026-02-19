@@ -200,12 +200,38 @@ mapping acescprotectionType_bits : AceSCProtectionType <-> bits(2) = {
 
 enum AceStateNumberType = {
     ACESN_Initial,
+    ACESN_Operate,
+    ACESN_HashAbsorb,
+    ACESN_HashLastBlock,
+    ACESN_HashFinalize,
+    ACESN_HashVerify,
+    ACESN_HashOutput,
+    ACESN_Encrypt,
+    ACESN_Decrypt,
+    ACESN_EncryptLastBlock,
+    ACESN_DecryptLastBlock,
+    ACESN_EncryptTagFinalize,
+    ACESN_DecryptTagFinalize,
+    ACESN_SetAuxValue,
     ACESN_Invalid,
     ACESN_Completed
 }
 
 mapping acestatenumberType_bits : AceStateNumberType <-> bits(4) = {
-  ACESN_Initial   <-> 0b0000, // 0
-  ACESN_Invalid   <-> 0b1110, // 14
-  ACESN_Completed <-> 0b1111  // 15
+  ACESN_Initial            <-> 0b0000, // 0
+  ACESN_Operate            <-> 0b0001, // 1
+  ACESN_HashAbsorb         <-> 0b0001, // 1
+  ACESN_HashLastBlock      <-> 0b0010, // 2
+  ACESN_HashFinalize       <-> 0b0011, // 3
+  ACESN_HashVerify         <-> 0b0100, // 4
+  ACESN_HashOutput         <-> 0b0101, // 5
+  ACESN_Encrypt            <-> 0b0110, // 6
+  ACESN_Decrypt            <-> 0b0111, // 7
+  ACESN_EncryptLastBlock   <-> 0b1000, // 8
+  ACESN_DecryptLastBlock   <-> 0b1001, // 9
+  ACESN_EncryptTagFinalize <-> 0b1010, // 10
+  ACESN_DecryptTagFinalize <-> 0b1011, // 11
+  ACESN_SetAuxValue        <-> 0b1100, // 12
+  ACESN_Invalid            <-> 0b1110, // 14
+  ACESN_Completed          <-> 0b1111  // 15
 }
