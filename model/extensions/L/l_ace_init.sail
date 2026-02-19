@@ -27,8 +27,7 @@ function clause execute ACEINIT(imm, xs, kd) = {
   // Reset `acestart` because there is nothing to restart
   set_acestart(zeros());
 
-  let has_error = has_metadata_error(kd);
-  if has_error then {
+  if has_metadata_error(kd) then {
       return RETIRE_SUCCESS
   };
 
