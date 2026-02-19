@@ -41,3 +41,14 @@ mapping clause encdec = ACERESET()
 
 mapping clause assembly = ACERESET()
   <-> "ace.reset"
+
+// ******************* ace.size *********************
+union clause instruction = ACESIZE_F0: (lregidx, regidx)
+
+// TODO Implement indirect CR access
+mapping clause encdec = ACESIZE_F0(ks, xd)
+  <-> 0b00 @ 0b00 @ 0b0 @ 0b0 @ 0b1 @ 0b00000 @ encdec_lreg(ks) @ 0b000 @ encdec_reg(xd) @ 0b1011011
+  when (currentlyEnabled(Ext_L))
+
+mapping clause assembly = ACESIZE_F0(ks, xd)
+  <-> "ace.size" ^ spc() ^ reg_name(xd) ^ sep()  ^ lreg_name(ks)

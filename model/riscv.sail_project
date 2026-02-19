@@ -283,6 +283,7 @@ extensions {
         extensions/L/l_ace_prov.sail,
         extensions/L/l_ace_reset.sail,
         extensions/L/l_ace_clear.sail,
+        extensions/L/l_ace_size_f0.sail,
     }
   }
 
