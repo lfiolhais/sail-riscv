@@ -278,7 +278,7 @@ extensions {
       requires sys, I, L_core
       files
         extensions/L/lext_base_insts.sail,
-        extensions/L/l_ace_init.sail
+        extensions/L/l_ace_prov.sail,
     }
   }
 
