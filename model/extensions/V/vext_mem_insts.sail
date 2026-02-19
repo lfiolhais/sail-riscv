@@ -52,6 +52,7 @@ mapping clause encdec = VLSEGTYPE(nf, vm, rs1, width, vd)
 
 private function process_vlseg(nf : nfields, vm : bits(1), vd : vregidx, load_width_bytes : word_width, rs1 : regidx, EMUL_pow : int, num_elem : range(1, vlen)) -> ExecutionResult = {
   let EMUL_reg = if EMUL_pow <= 0 then 1 else 2 ^ EMUL_pow;
+
   let vm_val = read_vmask(num_elem, vm, zvreg);
   let vd_seg = read_vreg_seg(num_elem, load_width_bytes * 8, EMUL_pow, nf, vd);
 
@@ -63,7 +64,7 @@ private function process_vlseg(nf : nfields, vm : bits(1), vd : vregidx, load_wi
   };
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then { // active segments
+    if mask[i] == 0b1 then { // active segments
       set_vstart(to_bits_unsafe(16, i));
       foreach (j from 0 to (nf - 1)) {
         let elem_offset = (i * nf + j) * load_width_bytes;
@@ -91,13 +92,14 @@ function clause execute VLSEGTYPE(nf, vm, rs1, width, vd) = {
   let SEW_pow = get_sew_pow();
   let LMUL_pow = get_lmul_pow();
   let EMUL_pow = EEW_pow - SEW_pow + LMUL_pow;
-  // TODO: The EMUL_pow calculation here is incorrect. See https://github.com/riscv/sail-riscv/issues/1196
+
   assert(-3 <= EMUL_pow & EMUL_pow <= 3);
+
+  if illegal_load(vd, vm, nf, EEW, EMUL_pow) | not(valid_reg_group(vd, EMUL_pow))
+  then return Illegal_Instruction();
+
   let num_elem = get_num_elem(EMUL_pow, EEW); // # of element of each register group
-
   assert(num_elem > 0);
-
-  if illegal_load(vd, vm, nf, EEW, EMUL_pow) then return Illegal_Instruction();
 
   process_vlseg(nf, vm, vd, load_width_bytes, rs1, EMUL_pow, num_elem)
 }
@@ -129,7 +131,7 @@ private function process_vlsegff(nf : nfields, vm : bits(1), vd : vregidx, load_
   var trimmed : bool = false;
   foreach (i from 0 to (num_elem - 1)) {
     if not(trimmed) then {
-      if mask[i] == bitone then { // active segments
+      if mask[i] == 0b1 then { // active segments
         foreach (j from 0 to (nf - 1)) {
           let elem_offset = (i * nf + j) * load_width_bytes;
           match vmem_read(rs1, to_bits_unsafe(xlen, elem_offset), load_width_bytes, Load(Data), false, false, false) {
@@ -171,13 +173,14 @@ function clause execute VLSEGFFTYPE(nf, vm, rs1, width, vd) = {
   let SEW_pow = get_sew_pow();
   let LMUL_pow = get_lmul_pow();
   let EMUL_pow = EEW_pow - SEW_pow + LMUL_pow;
-  // TODO: The EMUL_pow calculation here is incorrect. See https://github.com/riscv/sail-riscv/issues/1196
+
   assert(-3 <= EMUL_pow & EMUL_pow <= 3);
+
+  if illegal_load(vd, vm, nf, EEW, EMUL_pow) | not(valid_reg_group(vd, EMUL_pow))
+  then return Illegal_Instruction();
+
   let num_elem = get_num_elem(EMUL_pow, EEW);
-
   assert(num_elem > 0);
-
-  if illegal_load(vd, vm, nf, EEW, EMUL_pow) then return Illegal_Instruction();
 
   process_vlsegff(nf, vm, vd, load_width_bytes, rs1, EMUL_pow, num_elem)
 }
@@ -205,7 +208,7 @@ private function process_vsseg(nf : nfields, vm : bits(1), vs3 : vregidx, load_w
   };
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then { // active segments
+    if mask[i] == 0b1 then { // active segments
       set_vstart(to_bits_unsafe(16, i));
       foreach (j from 0 to (nf - 1)) {
         let elem_offset = (i * nf + j) * load_width_bytes;
@@ -231,13 +234,14 @@ function clause execute VSSEGTYPE(nf, vm, rs1, width, vs3) = {
   let SEW_pow = get_sew_pow();
   let LMUL_pow = get_lmul_pow();
   let EMUL_pow = EEW_pow - SEW_pow + LMUL_pow;
-  // TODO: The EMUL_pow calculation here is incorrect. See https://github.com/riscv/sail-riscv/issues/1196
+
   assert(-3 <= EMUL_pow & EMUL_pow <= 3);
+
+  if illegal_store(nf, EEW, EMUL_pow) | not(valid_reg_group(vs3, EMUL_pow))
+  then return Illegal_Instruction();
+
   let num_elem = get_num_elem(EMUL_pow, EEW);
-
   assert(num_elem > 0);
-
-  if illegal_store(nf, EEW, EMUL_pow) then return Illegal_Instruction();
 
   process_vsseg(nf, vm, vs3, load_width_bytes, rs1, EMUL_pow, num_elem)
 }
@@ -267,7 +271,7 @@ private function process_vlsseg(nf : nfields, vm : bits(1), vd : vregidx, load_w
   };
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then { // active segments
+    if mask[i] == 0b1 then { // active segments
       set_vstart(to_bits_unsafe(16, i));
       foreach (j from 0 to (nf - 1)) {
         let elem_offset = i * rs2_val + j * load_width_bytes;
@@ -295,13 +299,14 @@ function clause execute VLSSEGTYPE(nf, vm, rs2, rs1, width, vd) = {
   let SEW_pow = get_sew_pow();
   let LMUL_pow = get_lmul_pow();
   let EMUL_pow = EEW_pow - SEW_pow + LMUL_pow;
-  // TODO: The EMUL_pow calculation here is incorrect. See https://github.com/riscv/sail-riscv/issues/1196
+
   assert(-3 <= EMUL_pow & EMUL_pow <= 3);
+
+  if illegal_load(vd, vm, nf, EEW, EMUL_pow) | not(valid_reg_group(vd, EMUL_pow))
+  then return Illegal_Instruction();
+
   let num_elem = get_num_elem(EMUL_pow, EEW);
-
   assert(num_elem > 0);
-
-  if illegal_load(vd, vm, nf, EEW, EMUL_pow) then return Illegal_Instruction();
 
   process_vlsseg(nf, vm, vd, load_width_bytes, rs1, rs2, EMUL_pow, num_elem)
 }
@@ -330,7 +335,7 @@ private function process_vssseg(nf : nfields, vm : bits(1), vs3 : vregidx, load_
   };
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then { // active segments
+    if mask[i] == 0b1 then { // active segments
       set_vstart(to_bits_unsafe(16, i));
       foreach (j from 0 to (nf - 1)) {
         let elem_offset = i * rs2_val + j * load_width_bytes;
@@ -356,13 +361,14 @@ function clause execute VSSSEGTYPE(nf, vm, rs2, rs1, width, vs3) = {
   let SEW_pow = get_sew_pow();
   let LMUL_pow = get_lmul_pow();
   let EMUL_pow = EEW_pow - SEW_pow + LMUL_pow;
-  // TODO: The EMUL_pow calculation here is incorrect. See https://github.com/riscv/sail-riscv/issues/1196
+
   assert(-3 <= EMUL_pow & EMUL_pow <= 3);
+
+  if illegal_store(nf, EEW, EMUL_pow) | not(valid_reg_group(vs3, EMUL_pow))
+  then return Illegal_Instruction();
+
   let num_elem = get_num_elem(EMUL_pow, EEW);
-
   assert(num_elem > 0);
-
-  if illegal_store(nf, EEW, EMUL_pow) then return Illegal_Instruction();
 
   process_vssseg(nf, vm, vs3, load_width_bytes, rs1, rs2, EMUL_pow, num_elem)
 }
@@ -396,7 +402,7 @@ private function process_vlxseg(nf : nfields, vm : bits(1), vd : vregidx, EEW_in
 
   // As mentioned above, currently mop = 1 (unordered) or 3 (ordered) do the same operations.
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then { // active segments
+    if mask[i] == 0b1 then { // active segments
       set_vstart(to_bits_unsafe(16, i));
       foreach (j from 0 to (nf - 1)) {
         let elem_offset : int = unsigned(vs2_val[i]) + j * EEW_data_bytes;
@@ -424,12 +430,14 @@ function clause execute VLXSEGTYPE(nf, vm, vs2, rs1, width, vd, mop) = {
   let EEW_data_bytes = get_sew_bytes();
   let EMUL_data_pow = get_lmul_pow();
   let EMUL_index_pow = EEW_index_pow - EEW_data_pow + EMUL_data_pow;
-  let num_elem = get_num_elem(EMUL_data_pow, EEW_data_bytes * 8);
 
-  assert(num_elem > 0);
-
-  if illegal_indexed_load(vd, vm, nf, 2 ^ EEW_index_pow, EMUL_index_pow, EMUL_data_pow)
+  if illegal_indexed_load(vd, vm, nf, 2 ^ EEW_index_pow, EMUL_index_pow, EMUL_data_pow) |
+     not(valid_reg_group(vs2, EMUL_index_pow)) |
+     not(valid_reg_group(vd, EMUL_data_pow))
   then return Illegal_Instruction();
+
+  let num_elem = get_num_elem(EMUL_data_pow, EEW_data_bytes * 8);
+  assert(num_elem > 0);
 
   process_vlxseg(nf, vm, vd, EEW_index_bytes, EEW_data_bytes, EMUL_index_pow, EMUL_data_pow, rs1, vs2, num_elem, mop)
 }
@@ -462,7 +470,7 @@ private function process_vsxseg(nf : nfields, vm : bits(1), vs3 : vregidx, EEW_i
 
   // As mentioned above, currently mop = 1 (unordered) or 3 (ordered) do the same operations.
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then { // active segments
+    if mask[i] == 0b1 then { // active segments
       set_vstart(to_bits_unsafe(16, i));
       foreach (j from 0 to (nf - 1)) {
         let elem_offset : int = unsigned(vs2_val[i]) + j * EEW_data_bytes;
@@ -492,7 +500,9 @@ function clause execute VSXSEGTYPE(nf, vm, vs2, rs1, width, vs3, mop) = {
 
   assert(num_elem > 0);
 
-  if illegal_indexed_store(nf, 2 ^ EEW_index_pow, EMUL_index_pow, EMUL_data_pow)
+  if illegal_indexed_store(nf, 2 ^ EEW_index_pow, EMUL_index_pow, EMUL_data_pow) |
+     not(valid_reg_group(vs2, EMUL_index_pow)) |
+     not(valid_reg_group(vs3, EMUL_data_pow))
   then return Illegal_Instruction();
 
   process_vsxseg(nf, vm, vs3, EEW_index_bytes, EEW_data_bytes, EMUL_index_pow, EMUL_data_pow, rs1, vs2, num_elem, mop)
@@ -549,11 +559,12 @@ private function process_vlre(nf : nfields, vd : vregidx, load_width_bytes : wor
 }
 
 function clause execute VLRETYPE(nf, rs1, width, vd) = {
+  if not(valid_whole_register(vd, nf)) then return Illegal_Instruction();
+
   let EEW_pow = vlewidth_pow(width);
   let load_width_bytes = 2 ^ (EEW_pow - 3);
   let EEW = 2 ^ EEW_pow;
   let elem_per_reg = vlen / EEW;
-
   assert(elem_per_reg >= 0);
 
   process_vlre(nf, vd, load_width_bytes, rs1, elem_per_reg)
@@ -614,10 +625,11 @@ private function process_vsre(nf : nfields, load_width_bytes : word_width, rs1 :
 }
 
 function clause execute VSRETYPE(nf, rs1, vs3) = {
+  if not(valid_whole_register(vs3, nf)) then return Illegal_Instruction();
+
   let load_width_bytes = 1;
   let EEW = 8;
   let elem_per_reg = vlen / EEW;
-
   assert(elem_per_reg >= 0);
 
   process_vsre(nf, load_width_bytes, rs1, vs3, elem_per_reg)

@@ -24,6 +24,17 @@ public:
   void set_enable_experimental_extensions(bool en);
   void set_reservation_set_size_exp(uint64_t exponent);
 
+  void set_config_print_instr(bool on);
+  void set_config_print_clint(bool on);
+  void set_config_print_exception(bool on);
+  void set_config_print_interrupt(bool on);
+  void set_config_print_htif(bool on);
+  void set_config_print_pma(bool on);
+  void set_config_rvfi(bool on);
+  void set_config_use_abi_names(bool on);
+
+  void set_config_print_step(bool on);
+
 private:
   // These functions are called by the Sail code.
 
@@ -48,7 +59,7 @@ private:
   // Page table walk callbacks
   unit ptw_start_callback(
     uint64_t vpn,
-    hart::zMemoryAccessTypezIuzK access_type,
+    hart::zMemoryAccessTypezIEmem_payloadz5zK access_type,
     hart::ztuple_z8z5enumz0zzPrivilegezCz0z5unitz9 privilege
   ) override;
   unit ptw_step_callback(int64_t level, sbits pte_addr, uint64_t pte) override;
@@ -80,6 +91,17 @@ private:
   bool get_config_print_pma(unit) override;
   bool get_config_rvfi(unit) override;
   bool get_config_use_abi_names(unit) override;
+
+  bool m_config_print_instr = false;
+  bool m_config_print_clint = false;
+  bool m_config_print_exception = false;
+  bool m_config_print_interrupt = false;
+  bool m_config_print_htif = false;
+  bool m_config_print_pma = false;
+  bool m_config_rvfi = false;
+  bool m_config_use_abi_names = false;
+
+  bool m_config_print_step = false;
 
   // TODO: Probably better with std::shared_ptr<callbacks_if>.
   std::vector<callbacks_if *> m_callbacks;

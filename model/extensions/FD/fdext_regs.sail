@@ -27,6 +27,7 @@ function canonical_NaN(n) =
     128 => 0b0 @ ones(15) @ 0b1 @ zeros(111),
   }
 
+let canonical_NaN_BF16 : bits(16) = 0x7fc0
 // For backwards compatibility with code that existed before the
 // generic version above.
 function canonical_NaN_H() -> bits(16)  = canonical_NaN(16)
@@ -210,7 +211,12 @@ function wF_bits(Fregidx(i) : fregidx, data: flenbits) -> unit = {
 overload F = {rF_bits, wF_bits, rF, wF}
 
 function rF_BF16(i : fregidx) -> bits(16) = {
-  nan_unbox(F(i))
+  // This is the same as `nan_unbox(F(i))` except that
+  // it returns the correct canonical NaN for BF16.
+  let v = F(i);
+  if v[flen - 1 .. 16] == ones()
+  then v[15 .. 0]
+  else canonical_NaN_BF16
 }
 
 function wF_BF16(i : fregidx, data : bits(16)) -> unit = {
@@ -283,7 +289,7 @@ function rF_or_X_D(i : fregidx) -> bits(64) = {
   then X(fregidx_to_regidx(i))[63..0]
   else {
     let ridx = fregidx_to_regidx(i);
-    assert(regidx_bits(ridx)[0] == bitzero);
+    assert(regidx_bits(ridx)[0] == 0b0);
     if ridx == zreg then zeros() else X(ridx + 1) @ X(ridx)
   }
 }
@@ -313,7 +319,7 @@ function wF_or_X_D(i : fregidx, data : bits(64)) -> unit = {
   then X(fregidx_to_regidx(i)) = sign_extend(data)
   else {
     let ridx = fregidx_to_regidx(i);
-    assert (regidx_bits(ridx)[0] == bitzero);
+    assert (regidx_bits(ridx)[0] == 0b0);
     if ridx != zreg then {
       X(ridx) = data[31..0];
       X(ridx + 1) = data[63..32];

@@ -8,9 +8,9 @@
 
 // Machine-mode and supervisor-mode functionality.
 
-function effectivePrivilege(access : MemoryAccessType(ext_access_type), m : Mstatus, priv : Privilege) -> Privilege =
+function effectivePrivilege(access : MemoryAccessType(mem_payload), m : Mstatus, priv : Privilege) -> Privilege =
   if   access != InstructionFetch() & m[MPRV] == 0b1
-  then privLevel_bits(m[MPP], bitzero) // TODO: use m[MPV] if hypervisor enabled
+  then privLevel_bits(m[MPP], 0b0) // TODO: use m[MPV] if hypervisor enabled
   else priv
 
 // CSR access control
@@ -18,9 +18,27 @@ function effectivePrivilege(access : MemoryAccessType(ext_access_type), m : Msta
 function csrAccess(csr : csreg) -> csrRW = csr[11..10]
 function csrPriv(csr : csreg) -> nom_priv_bits = csr[9..8]
 
+// When hypervisor is enabled, `Supervisor` (HS-mode) and
+// `VirtualSupervisor` (VS-mode) privileges are encoded as `0b01` in
+// `privLevel_bits()`, but the CSR addresses for hypervisor and VS
+// CSRs encode the required privilege as `0b10`.  This overrides
+// the encoding in `privLevel_bits()` for the purposes of CSR privilege
+// checks.
+private function privLevel_to_CSR_privbits(p : Privilege) -> nom_priv_bits =
+  match p {
+    User              => 0b00,
+    VirtualUser       => 0b00,
+    // Note that this `if` is not strictly necessary. We could return
+    // 0b10 unconditionally if other checks ensure that hypervisor
+    // CSRs do not exist if H is not enabled.
+    Supervisor        => if currentlyEnabled(Ext_H) then 0b10 else 0b01,
+    VirtualSupervisor => 0b01,
+    Machine           => 0b11,
+  }
+
 // Check that the CSR access is made with sufficient privilege.
 function check_CSR_priv(csr : csreg, p : Privilege) -> bool =
-  privLevel_to_bits(p) >=_u csrPriv(csr)
+  privLevel_to_CSR_privbits(p) >=_u csrPriv(csr)
 
 // Check that the CSR access isn't a write to a read-only CSR.
 function check_CSR_access(csr : csreg, access_type : CSRAccessType) -> bool =
@@ -30,6 +48,7 @@ function check_CSR(csr : csreg, p : Privilege, access_type : CSRAccessType) -> b
     check_CSR_priv(csr, p)
   & check_CSR_access(csr, access_type)
   & is_CSR_accessible(csr, p, access_type)
+  & stateen_allows_CSR_access(csr, p, access_type)
 
 // Exception delegation: given an exception and the privilege at which
 // it occurred, returns the privilege at which it should be handled.
@@ -43,8 +62,9 @@ function exception_delegatee(e : ExceptionType, p : Privilege) -> Privilege = {
   then p else deleg
 }
 
-// Interrupts are prioritized in privilege order, and for each
-// privilege, in the order: external, software, timers.
+// "Multiple simultaneous interrupts destined for M-mode are handled
+// in the following decreasing priority order: MEI, MSI, MTI, SEI,
+// SSI, STI, LCOFI."
 function findPendingInterrupt(ip : xlenbits) -> option(InterruptType) = {
   let ip = Mk_Minterrupts(ip);
   if      ip[MEI] == 0b1 then Some(I_M_External)
@@ -53,6 +73,7 @@ function findPendingInterrupt(ip : xlenbits) -> option(InterruptType) = {
   else if ip[SEI] == 0b1 then Some(I_S_External)
   else if ip[SSI] == 0b1 then Some(I_S_Software)
   else if ip[STI] == 0b1 then Some(I_S_Timer)
+  else if ip[LCOFI] == 0b1 then Some(I_COF)
   else                        None()
 }
 
@@ -168,7 +189,7 @@ function trap_handler(del_priv : Privilege, c : TrapCause, pc : xlenbits, info :
 
   match (del_priv) {
     Machine => {
-      mcause[IsInterrupt] = bool_to_bits(is_interrupt);
+      mcause[IsInterrupt] = bool_to_bit(is_interrupt);
       mcause[Cause]       = zero_extend(cause);
 
       mstatus[MPIE] = mstatus[MIE];
@@ -188,7 +209,7 @@ function trap_handler(del_priv : Privilege, c : TrapCause, pc : xlenbits, info :
     Supervisor => {
       assert (currentlyEnabled(Ext_S), "no supervisor mode present for delegation");
 
-      scause[IsInterrupt] = bool_to_bits(is_interrupt);
+      scause[IsInterrupt] = bool_to_bit(is_interrupt);
       scause[Cause]       = zero_extend(cause);
 
       mstatus[SPIE] = mstatus[SIE];
@@ -231,7 +252,7 @@ function exception_handler(cur_priv : Privilege, ctl : ctl_result,
       let prev_priv = cur_privilege;
       mstatus[MIE]  = mstatus[MPIE];
       mstatus[MPIE] = 0b1;
-      cur_privilege = privLevel_bits(mstatus[MPP], bitzero); // TODO: use mstatus[MPV] if hypervisor enabled
+      cur_privilege = privLevel_bits(mstatus[MPP], 0b0); // TODO: use mstatus[MPV] if hypervisor enabled
       mstatus[MPP]  = privLevel_to_bits(if currentlyEnabled(Ext_U) then User else Machine);
       if   cur_privilege != Machine
       then mstatus[MPRV] = 0b0;
@@ -273,27 +294,32 @@ function exception_handler(cur_priv : Privilege, ctl : ctl_result,
 function xtval_exception_value(e : ExceptionType, excinfo : xlenbits) -> option(xlenbits) = {
   if match e {
     E_Illegal_Instr() => illegal_instruction_writes_xtval,
+    E_Virtual_Instr() => virtual_instruction_writes_xtval,
     E_Breakpoint(Brk_Software) => software_breakpoint_writes_xtval,
     E_Breakpoint(Brk_Hardware) => hardware_breakpoint_writes_xtval,
     E_Load_Addr_Align() => misaligned_load_writes_xtval,
     E_Load_Access_Fault() => load_access_fault_writes_xtval,
     E_Load_Page_Fault() => load_page_fault_writes_xtval,
+    E_Load_GPage_Fault() => load_guest_page_fault_writes_xtval,
     E_SAMO_Addr_Align() => misaligned_samo_writes_xtval,
     E_SAMO_Access_Fault() => samo_access_fault_writes_xtval,
     E_SAMO_Page_Fault() => samo_page_fault_writes_xtval,
+    E_SAMO_GPage_Fault() => samo_guest_page_fault_writes_xtval,
     E_Fetch_Addr_Align() => misaligned_fetch_writes_xtval,
     E_Fetch_Access_Fault() => fetch_access_fault_writes_xtval,
     E_Fetch_Page_Fault() => fetch_page_fault_writes_xtval,
+    E_Fetch_GPage_Fault() => fetch_guest_page_fault_writes_xtval,
     E_Software_Check() => software_check_fault_writes_xtval,
-    E_U_EnvCall() => false,
-    E_S_EnvCall() => false,
-    E_M_EnvCall() => false,
+    E_U_EnvCall()  => false,
+    E_S_EnvCall()  => false,
+    E_VS_EnvCall() => false,
+    E_M_EnvCall()  => false,
     E_Extension(_) => true,
     // the rest are all reserved exceptions
-    E_Reserved_10() => reserved_exceptions_write_xtval,
     E_Reserved_14() => reserved_exceptions_write_xtval,
     E_Reserved_16() => reserved_exceptions_write_xtval,
     E_Reserved_17() => reserved_exceptions_write_xtval,
+    E_Reserved_19() => reserved_exceptions_write_xtval,
   } then Some(excinfo) else None()
 }
 
@@ -309,26 +335,26 @@ function handle_interrupt(i : InterruptType, del_priv : Privilege) -> unit =
 
 // Reset misa to enable the maximal set of supported extensions.
 function reset_misa() -> unit = {
-  misa[A]   = bool_to_bits(hartSupports(Ext_A));   // atomics
-  misa[C]   = bool_to_bits(hartSupports(Ext_C));   // RVC
-  misa[B]   = bool_to_bits(hartSupports(Ext_B));   // Bit-manipulation
-  misa[L]   = bool_to_bits(hartSupports(Ext_L));   // HAC
-  misa[M]   = bool_to_bits(hartSupports(Ext_M));   // integer multiply/divide
-  misa[U]   = bool_to_bits(hartSupports(Ext_U));   // user-mode
-  misa[S]   = bool_to_bits(hartSupports(Ext_S));   // supervisor-mode
-  misa[V]   = bool_to_bits(hartSupports(Ext_V));   // vector extension
+  misa[A]   = bool_to_bit(hartSupports(Ext_A));   // atomics
+  misa[C]   = bool_to_bit(hartSupports(Ext_C));   // RVC
+  misa[B]   = bool_to_bit(hartSupports(Ext_B));   // Bit-manipulation
+  misa[L]   = bool_to_bit(hartSupports(Ext_L));   // HAC
+  misa[M]   = bool_to_bit(hartSupports(Ext_M));   // integer multiply/divide
+  misa[U]   = bool_to_bit(hartSupports(Ext_U));   // user-mode
+  misa[S]   = bool_to_bit(hartSupports(Ext_S));   // supervisor-mode
+  misa[V]   = bool_to_bit(hartSupports(Ext_V));   // vector extension
 
   // Base integer ISA (disabled if we only support the 16-register E base).
-  misa[E] = bool_to_bits(base_E_enabled);
+  misa[E] = bool_to_bit(base_E_enabled);
   misa[I] = ~(misa[E]);
 
   if   hartSupports(Ext_F) & hartSupports(Ext_Zfinx)
   then internal_error(__FILE__, __LINE__, "F and Zfinx cannot both be enabled!");
 
   // We currently support both F and D
-  misa[F]   = bool_to_bits(hartSupports(Ext_F));      // single-precision
+  misa[F]   = bool_to_bit(hartSupports(Ext_F));      // single-precision
   misa[D]   = if   flen >= 64
-              then bool_to_bits(hartSupports(Ext_D))  // double-precision
+              then bool_to_bit(hartSupports(Ext_D))  // double-precision
               else 0b0;
   csr_write_callback("misa", misa.bits);
 }
@@ -382,11 +408,14 @@ function reset_sys() -> unit = {
 
   // "The [s,u]seed bits must have a defined reset value. The system must
   // not allow them to be in an undefined state after a reset."
-  mseccfg[SSEED] = bool_to_bits(config extensions.Zkr.sseed_reset_value : bool);
-  mseccfg[USEED] = bool_to_bits(config extensions.Zkr.useed_reset_value : bool);
+  mseccfg[SSEED] = bool_to_bit(config extensions.Zkr.sseed_reset_value : bool);
+  mseccfg[USEED] = bool_to_bit(config extensions.Zkr.useed_reset_value : bool);
 
   // If the Zicfilp extension is implemented, the mseccfg.MLPE field is reset to 0.
   if hartSupports(Ext_Zicfilp) then mseccfg[MLPE] = 0b0;
+
+  // "On reset, all writable mstateen bits are initialized by the hardware to zeros."
+  reset_stateen();
 
   // TODO: Probably need to remove these vector resets too but it needs
   // refactoring anyway. See https://github.com/riscv/sail-riscv/issues/566 etc.

@@ -7,16 +7,6 @@ execute_process(
 )
 message(STATUS "Sail version: ${sail_version}")
 
-# The --version is is usually a multiline output; the first line is the most useful.
-execute_process(
-    COMMAND ${CMAKE_CXX_COMPILER} --version
-    OUTPUT_VARIABLE compiler_version_blob
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ERROR_IS_FATAL ANY
-)
-string(REGEX MATCH "[^\n\r]*" cxx_compiler_version ${compiler_version_blob})
-message(STATUS "CXX compiler version: ${cxx_compiler_version}")
-
 # make version available to emulator
 configure_file(sail_riscv_version.cpp.in sail_riscv_version.cpp @ONLY)
 
@@ -40,7 +30,6 @@ add_library(riscv_model
     elf_loader.h
     riscv_callbacks_if.cpp
     riscv_callbacks_if.h
-    riscv_config.h
     riscv_platform_if.cpp
     riscv_platform_if.h
     riscv_model_impl.cpp
@@ -49,6 +38,8 @@ add_library(riscv_model
     riscv_softfloat.h
     config_utils.cpp
     config_utils.h
+    file_utils.cpp
+    file_utils.h
     symbol_table.cpp
     symbol_table.h
     sail_riscv_version.h

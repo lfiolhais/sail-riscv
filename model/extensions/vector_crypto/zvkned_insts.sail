@@ -26,6 +26,10 @@ function clause execute VAESDF(funct6, vs2, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
+  if not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
+
   assert(SEW == 32);
 
   let vs2_val = read_vreg(num_elem, SEW, LMUL_pow, vs2);
@@ -78,6 +82,10 @@ function clause execute VAESDM(funct6, vs2, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
+  if not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   assert(SEW == 32);
 
@@ -133,6 +141,10 @@ function clause execute VAESEF(funct6, vs2, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
+  if not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
+
   assert(SEW == 32);
 
   let vs2_val = read_vreg(num_elem, SEW, LMUL_pow, vs2);
@@ -186,6 +198,10 @@ function clause execute VAESEM(funct6, vs2, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
+  if not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
+
   assert(SEW == 32);
 
   let vs2_val = read_vreg(num_elem, SEW, LMUL_pow, vs2);
@@ -233,6 +249,10 @@ function clause execute VAESKF1_VI(vs2, rnd, vd) = {
   let SEW = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
+  if not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   assert(SEW == 32);
 
@@ -284,6 +304,10 @@ function clause execute VAESKF2_VI(vs2, rnd, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
+  if not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
+
   assert(SEW == 32);
 
   let vs2_val = read_vreg(num_elem, SEW, LMUL_pow, vs2);
@@ -305,7 +329,7 @@ function clause execute VAESKF2_VI(vs2, rnd, vd) = {
     let current_round_key = get_velem_quad_vec(vs2_val, i);
     let round_key_b       = get_velem_quad_vec(vd_val, i);
 
-    w[0] = if (rnd_val[0] == bitone)
+    w[0] = if (rnd_val[0] == 0b1)
            then aes_subword_fwd(current_round_key[3]) ^ round_key_b[0]
            else aes_subword_fwd(current_round_key[3] >>> 8) ^
                 aes_decode_rcon((rnd_val >> 1) - 1) ^ round_key_b[0];
@@ -334,6 +358,10 @@ function clause execute VAESZ_VS(vs2, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
+  if not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   assert(SEW == 32);
 

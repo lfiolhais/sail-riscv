@@ -46,16 +46,37 @@ function valid_rd_mask(rd : vregidx, vm : bits(1)) -> bool = {
   vm != 0b0 | rd != zvreg
 }
 
+// Check that a vector register number for a vector register group is
+// a multiple of its EMUL. Fractional EMULs are rounded up to 1.
+function valid_reg_group(r : vregidx, EMUL_pow : int) -> bool = {
+  let reg_group_size = if EMUL_pow > 0 then 2 ^ EMUL_pow else 1;
+  unsigned(vregidx_bits(r)) % reg_group_size == 0
+}
+
+// For whole register loads/stores: "The nf field encodes how many
+// vector registers to load and store using the NFIELDS encoding. The
+// encoded number of registers must be a power of 2 and the vector
+// register numbers must be aligned as with a vector register group,
+// otherwise the instruction encoding is reserved."
+function valid_whole_register(r : vregidx, nf : nfields_pow2) -> bool = {
+  unsigned(vregidx_bits(r)) % nf == 0
+}
+
 // Check for valid register overlap in vector widening/narrowing instructions:
 // In a widening instruction, the overlap is valid only in the highest-numbered part
 // of the destination register group, and the source EMUL is at least 1.
 // In a narrowing instruction, the overlap is valid only in the lowest-numbered part
 // of the source register group.
+// This also checks that the source and destination register groups are valid.
 function valid_reg_overlap(rs : vregidx, rd : vregidx, EMUL_pow_rs : int, EMUL_pow_rd : int) -> bool = {
   let rs_group = if EMUL_pow_rs > 0 then 2 ^ EMUL_pow_rs else 1;
   let rd_group = if EMUL_pow_rd > 0 then 2 ^ EMUL_pow_rd else 1;
   let rs_int = unsigned(vregidx_bits(rs));
   let rd_int = unsigned(vregidx_bits(rd));
+
+  if rs_int % rs_group != 0 | rd_int % rd_group != 0
+  then return false;
+
   if EMUL_pow_rs < EMUL_pow_rd then {
     (rs_int + rs_group <= rd_int) | (rs_int >= rd_int + rd_group) |
     ((rs_int + rs_group == rd_int + rd_group) & (EMUL_pow_rs >= 0))
@@ -292,31 +313,31 @@ function init_masked_result(num_elem, _EEW, LMUL_pow, vd_val, vm_val) = {
     if i < start_element then {
       // Prestart elements defined by vstart
       result[i] = vd_val[i];
-      mask[i] = bitzero
+      mask[i] = 0b0
     } else if i > end_element then {
       // Tail elements defined by vl
       result[i] = match tail_ag {
         UNDISTURBED => vd_val[i],
         AGNOSTIC    => vd_val[i] // TODO: configuration support
       };
-      mask[i] = bitzero
+      mask[i] = 0b0
     } else if i >= real_num_elem then {
       // Tail elements defined by lmul < 1
       result[i] = match tail_ag {
         UNDISTURBED => vd_val[i],
         AGNOSTIC    => vd_val[i] // TODO: configuration support
       };
-      mask[i] = bitzero
-    } else if vm_val[i] == bitzero then {
+      mask[i] = 0b0
+    } else if vm_val[i] == 0b0 then {
       // Inactive body elements defined by vm
       result[i] = match mask_ag {
         UNDISTURBED => vd_val[i],
         AGNOSTIC    => vd_val[i] // TODO: configuration support
       };
-      mask[i] = bitzero
+      mask[i] = 0b0
     } else {
       // Active body elements
-      mask[i] = bitone;
+      mask[i] = 0b1;
     }
   };
 
@@ -343,19 +364,19 @@ function init_masked_source(num_elem, LMUL_pow, vm_val) = {
   foreach (i from 0 to (num_elem - 1)) {
     if i < start_element then {
       // Prestart elements defined by vstart
-      mask[i] = bitzero
+      mask[i] = 0b0
     } else if i > end_element then {
       // Tail elements defined by vl
-      mask[i] = bitzero
+      mask[i] = 0b0
     } else if i >= real_num_elem then {
       // Tail elements defined by lmul < 1
-      mask[i] = bitzero
-    } else if vm_val[i] == bitzero then {
+      mask[i] = 0b0
+    } else if vm_val[i] == 0b0 then {
       // Inactive body elements defined by vm
-      mask[i] = bitzero
+      mask[i] = 0b0
     } else {
       // Active body elements
-      mask[i] = bitone;
+      mask[i] = 0b1;
     }
   };
 
@@ -382,20 +403,20 @@ function init_masked_result_carry(num_elem, _EEW, LMUL_pow, vd_val) = {
     if i < start_element then {
       // Prestart elements defined by vstart
       result[i] = vd_val[i];
-      mask[i] = bitzero
+      mask[i] = 0b0
     } else if i > end_element then {
       // Tail elements defined by vl
       // Mask tail is always agnostic
       result[i] = vd_val[i]; // TODO: configuration support
-      mask[i] = bitzero
+      mask[i] = 0b0
     } else if i >= real_num_elem then {
       // Tail elements defined by lmul < 1
       // Mask tail is always agnostic
       result[i] = vd_val[i]; // TODO: configuration support
-      mask[i] = bitzero
+      mask[i] = 0b0
     } else {
       // Active body elements
-      mask[i] = bitone
+      mask[i] = 0b1
     }
   };
 
@@ -422,27 +443,27 @@ function init_masked_result_cmp(num_elem, _EEW, LMUL_pow, vd_val, vm_val) = {
     if i < start_element then {
       // Prestart elements defined by vstart
       result[i] = vd_val[i];
-      mask[i] = bitzero
+      mask[i] = 0b0
     } else if i > end_element then {
       // Tail elements defined by vl
       // Mask tail is always agnostic
       result[i] = vd_val[i]; // TODO: configuration support
-      mask[i] = bitzero
+      mask[i] = 0b0
     } else if i >= real_num_elem then {
       // Tail elements defined by lmul < 1
       // Mask tail is always agnostic
       result[i] = vd_val[i]; // TODO: configuration support
-      mask[i] = bitzero
-    } else if vm_val[i] == bitzero then {
+      mask[i] = 0b0
+    } else if vm_val[i] == 0b0 then {
       // Inactive body elements defined by vm
       result[i] = match mask_ag {
         UNDISTURBED => vd_val[i],
         AGNOSTIC    => vd_val[i] // TODO: configuration support
       };
-      mask[i] = bitzero
+      mask[i] = 0b0
     } else {
       // Active body elements
-      mask[i] = bitone
+      mask[i] = 0b1
     }
   };
 
@@ -491,15 +512,15 @@ function get_fixed_rounding_incr(vec_elem, shift_amount) = {
     // TODO: Change the type signature to enforce this assertion.
     assert(shift_amount < 'm);
     match rounding_mode {
-      0b00 => bit_to_bits(vec_elem[shift_amount - 1]),
+      0b00 => vec_elem[shift_amount - 1],
       0b01 => {
-        bool_to_bits(
-          vec_elem[shift_amount - 1] == bitone &
-          ((if shift_amount == 1 then false else vec_elem[shift_amount - 2 .. 0] != zeros()) | vec_elem[shift_amount] == bitone))
+        bool_to_bit(
+          vec_elem[shift_amount - 1] == 0b1 &
+          ((if shift_amount == 1 then false else vec_elem[shift_amount - 2 .. 0] != zeros()) | vec_elem[shift_amount] == 0b1))
       },
       0b10 => 0b0,
-      0b11 => bool_to_bits(
-        vec_elem[shift_amount] != bitone & vec_elem[shift_amount - 1 .. 0] != zeros())
+      0b11 => bool_to_bit(
+        vec_elem[shift_amount] != 0b1 & vec_elem[shift_amount - 1 .. 0] != zeros())
     }
   }
 }

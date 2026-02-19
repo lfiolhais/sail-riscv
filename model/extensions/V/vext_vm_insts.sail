@@ -32,15 +32,18 @@ function clause execute VVMTYPE(funct6, vs2, vs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_vd_unmasked() then return Illegal_Instruction();
+  if illegal_vd_unmasked() |
+     not(valid_reg_group(vs1, LMUL_pow)) |
+     not(valid_reg_group(vs2, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
 
-  let vm_val  : bits('n)     = read_vmask_carry(num_elem, 0b0, zvreg);
+  let vm_val  : bits('n)             = read_vmask_carry(num_elem, 0b0, zvreg);
   let vs1_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : bits('n)     = read_vmask(num_elem, 0b0, vd);
+  let vd_val  : bits('n)             = read_vmask(num_elem, 0b0, vd);
 
   let (initial_result, mask) : (bits('n), bits('n)) = match init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val) {
     Ok(v)   => v,
@@ -49,10 +52,10 @@ function clause execute VVMTYPE(funct6, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       let res : bool = match funct6 {
-        VVM_VMADC    => unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + (if vm_val[i] == bitone then 1 else 0) > 2 ^ SEW - 1,
-        VVM_VMSBC    => unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - (if vm_val[i] == bitone then 1 else 0) < 0
+        VVM_VMADC    => unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + (if vm_val[i] == 0b1 then 1 else 0) > 2 ^ SEW - 1,
+        VVM_VMSBC    => unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - (if vm_val[i] == 0b1 then 1 else 0) < 0
       };
       result[i] = bool_to_bit(res)
     }
@@ -92,14 +95,17 @@ function clause execute VVMCTYPE(funct6, vs2, vs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_vd_unmasked() then return Illegal_Instruction();
+  if illegal_vd_unmasked() |
+     not(valid_reg_group(vs1, LMUL_pow)) |
+     not(valid_reg_group(vs2, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
 
   let vs1_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : bits('n)     = read_vmask(num_elem, 0b0, vd);
+  let vd_val  : bits('n)             = read_vmask(num_elem, 0b0, vd);
 
   let (initial_result, mask) : (bits('n), bits('n)) = match init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val) {
     Ok(v)   => v,
@@ -108,7 +114,7 @@ function clause execute VVMCTYPE(funct6, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       let res : bool = match funct6 {
         VVMC_VMADC    => unsigned(vs2_val[i]) + unsigned(vs1_val[i]) > 2 ^ SEW - 1,
         VVMC_VMSBC    => unsigned(vs2_val[i]) - unsigned(vs1_val[i]) < 0
@@ -151,7 +157,11 @@ function clause execute VVMSTYPE(funct6, vs2, vs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_vd_masked(vd) then return Illegal_Instruction();
+  if illegal_vd_masked(vd) |
+     not(valid_reg_group(vs1, LMUL_pow)) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
@@ -159,7 +169,7 @@ function clause execute VVMSTYPE(funct6, vs2, vs1, vd) = {
   // for bypassing normal masking in init_masked_result
   let vec_trues : bits('n) = ones();
 
-  let vm_val  : bits('n)     = read_vmask_carry(num_elem, 0b0, zvreg);
+  let vm_val  : bits('n)             = read_vmask_carry(num_elem, 0b0, zvreg);
   let vs1_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
   let vd_val  : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
@@ -171,10 +181,10 @@ function clause execute VVMSTYPE(funct6, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
-        VVMS_VADC     => to_bits_unsafe(SEW, unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + (if vm_val[i] == bitone then 1 else 0)),
-        VVMS_VSBC     => to_bits_unsafe(SEW, unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - (if vm_val[i] == bitone then 1 else 0))
+        VVMS_VADC     => to_bits_unsafe(SEW, unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + (if vm_val[i] == 0b1 then 1 else 0)),
+        VVMS_VSBC     => to_bits_unsafe(SEW, unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - (if vm_val[i] == 0b1 then 1 else 0))
       }
     }
   };
@@ -215,15 +225,18 @@ function clause execute VVCMPTYPE(funct6, vm, vs2, vs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_vd_unmasked() then return Illegal_Instruction();
+  if illegal_vd_unmasked() |
+     not(valid_reg_group(vs1, LMUL_pow)) |
+     not(valid_reg_group(vs2, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
 
-  let vm_val  : bits('n)     = read_vmask(num_elem, vm, zvreg);
+  let vm_val  : bits('n)             = read_vmask(num_elem, vm, zvreg);
   let vs1_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : bits('n)     = read_vmask(num_elem, 0b0, vd);
+  let vd_val  : bits('n)             = read_vmask(num_elem, 0b0, vd);
 
   let (initial_result, mask) : (bits('n), bits('n)) = match init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val) {
     Ok(v)   => v,
@@ -232,7 +245,7 @@ function clause execute VVCMPTYPE(funct6, vm, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       let res : bool = match funct6 {
         VVCMP_VMSEQ    => vs2_val[i] == vs1_val[i],
         VVCMP_VMSNE    => vs2_val[i] != vs1_val[i],
@@ -283,15 +296,16 @@ function clause execute VXMTYPE(funct6, vs2, rs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_vd_unmasked() then return Illegal_Instruction();
+  if illegal_vd_unmasked() | not(valid_reg_group(vs2, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
 
-  let vm_val  : bits('n)     = read_vmask_carry(num_elem, 0b0, zvreg);
-  let rs1_val : bits('m)                  = get_scalar(rs1, SEW);
+  let vm_val  : bits('n)             = read_vmask_carry(num_elem, 0b0, zvreg);
+  let rs1_val : bits('m)             = get_scalar(rs1, SEW);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : bits('n)     = read_vmask(num_elem, 0b0, vd);
+  let vd_val  : bits('n)             = read_vmask(num_elem, 0b0, vd);
 
   let (initial_result, mask) : (bits('n), bits('n)) = match init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val) {
     Ok(v)   => v,
@@ -300,10 +314,10 @@ function clause execute VXMTYPE(funct6, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       let res : bool = match funct6 {
-        VXM_VMADC    => unsigned(vs2_val[i]) + unsigned(rs1_val) + (if vm_val[i] == bitone then 1 else 0) > 2 ^ SEW - 1,
-        VXM_VMSBC    => unsigned(vs2_val[i]) - unsigned(rs1_val) - (if vm_val[i] == bitone then 1 else 0) < 0
+        VXM_VMADC    => unsigned(vs2_val[i]) + unsigned(rs1_val) + (if vm_val[i] == 0b1 then 1 else 0) > 2 ^ SEW - 1,
+        VXM_VMSBC    => unsigned(vs2_val[i]) - unsigned(rs1_val) - (if vm_val[i] == 0b1 then 1 else 0) < 0
       };
       result[i] = bool_to_bit(res)
     }
@@ -343,14 +357,15 @@ function clause execute VXMCTYPE(funct6, vs2, rs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_vd_unmasked() then return Illegal_Instruction();
+  if illegal_vd_unmasked() | not(valid_reg_group(vs2, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
 
   let rs1_val : bits('m)             = get_scalar(rs1, SEW);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : bits('n)     = read_vmask(num_elem, 0b0, vd);
+  let vd_val  : bits('n)             = read_vmask(num_elem, 0b0, vd);
 
   let (initial_result, mask) : (bits('n), bits('n)) = match init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val) {
     Ok(v)   => v,
@@ -359,7 +374,7 @@ function clause execute VXMCTYPE(funct6, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       let res : bool = match funct6 {
         VXMC_VMADC    => unsigned(vs2_val[i]) + unsigned(rs1_val) > 2 ^ SEW - 1,
         VXMC_VMSBC    => unsigned(vs2_val[i]) - unsigned(rs1_val) < 0
@@ -402,7 +417,10 @@ function clause execute VXMSTYPE(funct6, vs2, rs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_vd_masked(vd) then return Illegal_Instruction();
+  if illegal_vd_masked(vd) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
@@ -410,8 +428,8 @@ function clause execute VXMSTYPE(funct6, vs2, rs1, vd) = {
   // for bypassing normal masking in init_masked_result
   let vec_trues : bits('n) = ones();
 
-  let vm_val  : bits('n)     = read_vmask_carry(num_elem, 0b0, zvreg);
-  let rs1_val : bits('m)                  = get_scalar(rs1, SEW);
+  let vm_val  : bits('n)             = read_vmask_carry(num_elem, 0b0, zvreg);
+  let rs1_val : bits('m)             = get_scalar(rs1, SEW);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
   let vd_val  : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
 
@@ -422,10 +440,10 @@ function clause execute VXMSTYPE(funct6, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
-        VXMS_VADC     => to_bits_unsafe(SEW, unsigned(vs2_val[i]) + unsigned(rs1_val) + (if vm_val[i] == bitone then 1 else 0)),
-        VXMS_VSBC     => to_bits_unsafe(SEW, unsigned(vs2_val[i]) - unsigned(rs1_val) - (if vm_val[i] == bitone then 1 else 0))
+        VXMS_VADC     => to_bits_unsafe(SEW, unsigned(vs2_val[i]) + unsigned(rs1_val) + (if vm_val[i] == 0b1 then 1 else 0)),
+        VXMS_VSBC     => to_bits_unsafe(SEW, unsigned(vs2_val[i]) - unsigned(rs1_val) - (if vm_val[i] == 0b1 then 1 else 0))
       }
     }
   };
@@ -468,15 +486,16 @@ function clause execute VXCMPTYPE(funct6, vm, vs2, rs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_vd_unmasked() then return Illegal_Instruction();
+  if illegal_vd_unmasked() | not(valid_reg_group(vs2, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
 
-  let vm_val  : bits('n)     = read_vmask(num_elem, vm, zvreg);
-  let rs1_val : bits('m)                  = get_scalar(rs1, SEW);
+  let vm_val  : bits('n)             = read_vmask(num_elem, vm, zvreg);
+  let rs1_val : bits('m)             = get_scalar(rs1, SEW);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : bits('n)     = read_vmask(num_elem, 0b0, vd);
+  let vd_val  : bits('n)             = read_vmask(num_elem, 0b0, vd);
 
   let (initial_result, mask) : (bits('n), bits('n)) = match init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val) {
     Ok(v)   => v,
@@ -485,7 +504,7 @@ function clause execute VXCMPTYPE(funct6, vm, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       let res : bool = match funct6 {
         VXCMP_VMSEQ    => vs2_val[i] == rs1_val,
         VXCMP_VMSNE    => vs2_val[i] != rs1_val,
@@ -539,15 +558,16 @@ function clause execute VIMTYPE(funct6, vs2, simm, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_vd_unmasked() then return Illegal_Instruction();
+  if illegal_vd_unmasked() | not(valid_reg_group(vs2, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
 
-  let vm_val  : bits('n)     = read_vmask_carry(num_elem, 0b0, zvreg);
-  let imm_val : bits('m)                  = sign_extend(simm);
+  let vm_val  : bits('n)             = read_vmask_carry(num_elem, 0b0, zvreg);
+  let imm_val : bits('m)             = sign_extend(simm);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : bits('n)     = read_vmask(num_elem, 0b0, vd);
+  let vd_val  : bits('n)             = read_vmask(num_elem, 0b0, vd);
 
   let (initial_result, mask) : (bits('n), bits('n)) = match init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val) {
     Ok(v)   => v,
@@ -556,9 +576,9 @@ function clause execute VIMTYPE(funct6, vs2, simm, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       let res : bool = match funct6 {
-        VIM_VMADC    => unsigned(vs2_val[i]) + unsigned(imm_val) + (if vm_val[i] == bitone then 1 else 0) > 2 ^ SEW - 1
+        VIM_VMADC    => unsigned(vs2_val[i]) + unsigned(imm_val) + (if vm_val[i] == 0b1 then 1 else 0) > 2 ^ SEW - 1
       };
       result[i] = bool_to_bit(res)
     }
@@ -596,14 +616,15 @@ function clause execute VIMCTYPE(funct6, vs2, simm, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_vd_unmasked() then return Illegal_Instruction();
+  if illegal_vd_unmasked() | not(valid_reg_group(vs2, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
 
   let imm_val : bits('m)             = sign_extend(simm);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : bits('n)     = read_vmask(num_elem, 0b0, vd);
+  let vd_val  : bits('n)             = read_vmask(num_elem, 0b0, vd);
 
   let (initial_result, mask) : (bits('n), bits('n)) = match init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val) {
     Ok(v)   => v,
@@ -612,7 +633,7 @@ function clause execute VIMCTYPE(funct6, vs2, simm, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       let res : bool = match funct6 {
         VIMC_VMADC    => unsigned(vs2_val[i]) + unsigned(imm_val) > 2 ^ SEW - 1
       };
@@ -652,7 +673,10 @@ function clause execute VIMSTYPE(funct6, vs2, simm, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_vd_masked(vd) then return Illegal_Instruction();
+  if illegal_vd_masked(vd) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
@@ -660,8 +684,8 @@ function clause execute VIMSTYPE(funct6, vs2, simm, vd) = {
   // for bypassing normal masking in init_masked_result
   let vec_trues : bits('n) = ones();
 
-  let vm_val  : bits('n)     = read_vmask_carry(num_elem, 0b0, zvreg);
-  let imm_val : bits('m)                  = sign_extend(simm);
+  let vm_val  : bits('n)             = read_vmask_carry(num_elem, 0b0, zvreg);
+  let imm_val : bits('m)             = sign_extend(simm);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
   let vd_val  : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
 
@@ -672,9 +696,9 @@ function clause execute VIMSTYPE(funct6, vs2, simm, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
-        VIMS_VADC     => to_bits_unsafe(SEW, unsigned(vs2_val[i]) + unsigned(imm_val) + (if vm_val[i] == bitone then 1 else 0))
+        VIMS_VADC     => to_bits_unsafe(SEW, unsigned(vs2_val[i]) + unsigned(imm_val) + (if vm_val[i] == 0b1 then 1 else 0))
       }
     }
   };
@@ -714,15 +738,16 @@ function clause execute VICMPTYPE(funct6, vm, vs2, simm, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_vd_unmasked() then return Illegal_Instruction();
+  if illegal_vd_unmasked() | not(valid_reg_group(vs2, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
 
-  let vm_val  : bits('n)     = read_vmask(num_elem, vm, zvreg);
-  let imm_val : bits('m)                  = sign_extend(simm);
+  let vm_val  : bits('n)             = read_vmask(num_elem, vm, zvreg);
+  let imm_val : bits('m)             = sign_extend(simm);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : bits('n)     = read_vmask(num_elem, 0b0, vd);
+  let vd_val  : bits('n)             = read_vmask(num_elem, 0b0, vd);
 
   let (initial_result, mask) : (bits('n), bits('n)) = match init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val) {
     Ok(v)   => v,
@@ -731,7 +756,7 @@ function clause execute VICMPTYPE(funct6, vm, vs2, simm, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       let res : bool = match funct6 {
         VICMP_VMSEQ    => vs2_val[i] == imm_val,
         VICMP_VMSNE    => vs2_val[i] != imm_val,

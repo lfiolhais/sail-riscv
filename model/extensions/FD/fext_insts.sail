@@ -53,7 +53,12 @@ function select_instr_or_fcsr_rm(instr_rm : rounding_mode) -> option(rounding_mo
   then {
     let fcsr_rm = fcsr[FRM];
     if (valid_rounding_mode(fcsr_rm) & fcsr_rm != encdec_rounding_mode(RM_DYN))
-      then Some(encdec_rounding_mode(fcsr_rm)) else None()
+    then Some(encdec_rounding_mode(fcsr_rm))
+    else match fcsr_rm_reserved_behavior {
+      Fcsr_RM_Fatal  => reserved_behavior("Dynamic floating-point rounding mode reserved behavior: fcsr.FRM contains reserved value " ^ bits_str(fcsr_rm)),
+      // Note: None() will be caught and converted into Illegal_Instruction() when this function is called.
+      Fcsr_RM_Illegal => None(),
+    }
   }
   else Some(instr_rm)
 
@@ -137,14 +142,14 @@ function f_is_pos_inf_S(x32 : bits(32)) -> bool = {
 function f_is_SNaN_S(x32 : bits(32)) -> bool = {
   let (sign, exp, mant) = fsplit_S (x32);
   (  (exp == ones())
-   & (mant [22] == bitzero)
+   & (mant [22] == 0b0)
    & (mant != zeros()))
 }
 
 function f_is_QNaN_S(x32 : bits(32)) -> bool = {
   let (sign, exp, mant) = fsplit_S (x32);
   (  (exp == ones())
-   & (mant [22] == bitone))
+   & (mant [22] == 0b1))
 }
 
 // Either QNaN or SNan
@@ -810,7 +815,7 @@ function clause execute F_BIN_TYPE_X_S(rs2, rs1, rd, FEQ_S) = {
       riscv_f32Eq (rs1_val_S, rs2_val_S);
 
   accrue_fflags(fflags);
-  X(rd) = zero_extend(bool_to_bits(rd_val));
+  X(rd) = zero_extend(bool_to_bit(rd_val));
   RETIRE_SUCCESS
 }
 
@@ -822,7 +827,7 @@ function clause execute F_BIN_TYPE_X_S(rs2, rs1, rd, FLT_S) = {
       riscv_f32Lt (rs1_val_S, rs2_val_S);
 
   accrue_fflags(fflags);
-  X(rd) = zero_extend(bool_to_bits(rd_val));
+  X(rd) = zero_extend(bool_to_bit(rd_val));
   RETIRE_SUCCESS
 }
 
@@ -834,7 +839,7 @@ function clause execute F_BIN_TYPE_X_S(rs2, rs1, rd, FLE_S) = {
       riscv_f32Le (rs1_val_S, rs2_val_S);
 
   accrue_fflags(fflags);
-  X(rd) = zero_extend(bool_to_bits(rd_val));
+  X(rd) = zero_extend(bool_to_bit(rd_val));
   RETIRE_SUCCESS
 }
 

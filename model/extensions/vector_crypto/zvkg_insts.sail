@@ -20,6 +20,11 @@ function clause execute VGHSH_VV(vs2, vs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
+  if not(valid_reg_group(vs1, LMUL_pow)) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
+
   assert(SEW == 32);
 
   let vs2_val = read_vreg(num_elem, SEW, LMUL_pow, vs2);
@@ -40,9 +45,9 @@ function clause execute VGHSH_VV(vs2, vs1, vd) = {
     let S : bits(128) = brev8(Y ^ X);
 
     foreach (b from 0 to 127) {
-      if S[b] == bitone then Z = Z ^ H;
+      if S[b] == 0b1 then Z = Z ^ H;
 
-      let reduce = H[127] == bitone;
+      let reduce = H[127] == 0b1;
       H = H << 1;
       if reduce then H = H[127..8] @ (H[7..0] ^ 0x87);
     };
@@ -69,6 +74,10 @@ function clause execute VGMUL_VV(vs2, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
+  if not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
+
   assert(SEW == 32);
 
   let vs2_val = read_vreg(num_elem, SEW, LMUL_pow, vs2);
@@ -85,9 +94,9 @@ function clause execute VGMUL_VV(vs2, vd) = {
     var Z : bits(128) = zeros();
 
     foreach (b from 0 to 127) {
-      if Y[b] == bitone then Z = Z ^ H;
+      if Y[b] == 0b1 then Z = Z ^ H;
 
-      let reduce = H[127] == bitone;
+      let reduce = H[127] == 0b1;
       H = H << 1;
       if reduce then H = H[127..8] @ (H[7..0] ^ 0x87);
     };

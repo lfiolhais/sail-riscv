@@ -39,13 +39,18 @@ function clause execute FVVTYPE(funct6, vm, vs2, vs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_fp_normal(vd, vm, SEW, rm_3b) then return Illegal_Instruction();
+  if illegal_fp_normal(vd, vm, SEW, rm_3b) |
+     not(valid_reg_group(vs1, LMUL_pow)) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
+
   assert(SEW != 8);
 
   let 'n = num_elem;
   let 'm = SEW;
 
-  let vm_val  : bits('n)            = read_vmask(num_elem, vm, zvreg);
+  let vm_val  : bits('n)             = read_vmask(num_elem, vm, zvreg);
   let vs1_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
   let vd_val  : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
@@ -57,7 +62,7 @@ function clause execute FVVTYPE(funct6, vm, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         FVV_VADD     => fp_add(rm_3b, vs2_val[i], vs1_val[i]),
         FVV_VSUB     => fp_sub(rm_3b, vs2_val[i], vs1_val[i]),
@@ -119,13 +124,18 @@ function clause execute FVVMATYPE(funct6, vm, vs2, vs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_fp_normal(vd, vm, SEW, rm_3b) then return Illegal_Instruction();
+  if illegal_fp_normal(vd, vm, SEW, rm_3b) |
+     not(valid_reg_group(vs1, LMUL_pow)) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
+
   assert(SEW != 8);
 
   let 'n = num_elem;
   let 'm = SEW;
 
-  let vm_val  : bits('n)     = read_vmask(num_elem, vm, zvreg);
+  let vm_val  : bits('n)             = read_vmask(num_elem, vm, zvreg);
   let vs1_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
   let vd_val  : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
@@ -137,7 +147,7 @@ function clause execute FVVMATYPE(funct6, vm, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         FVV_VMACC    => fp_muladd(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
         FVV_VNMACC   => fp_nmulsub(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
@@ -189,6 +199,7 @@ function clause execute FWVVTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
@@ -216,7 +227,7 @@ function clause execute FWVVTYPE(funct6, vm, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         FWVV_VADD    => fp_add(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i])),
         FWVV_VSUB    => fp_sub(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i])),
@@ -260,6 +271,7 @@ function clause execute FWVVMATYPE(funct6, vm, vs1, vs2, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
@@ -287,7 +299,7 @@ function clause execute FWVVMATYPE(funct6, vm, vs1, vs2, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         FWVV_VMACC   => fp_muladd(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
         FWVV_VNMACC  => fp_nmulsub(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
@@ -330,11 +342,13 @@ function clause execute FWVTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
   if  illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
-      not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen))
+      not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen)) |
+      not(valid_reg_group(vs2, LMUL_pow_widen))
   then return Illegal_Instruction();
 
   assert(SEW >= 16 & SEW_widen <= 64);
@@ -356,7 +370,7 @@ function clause execute FWVTYPE(funct6, vm, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         FWV_VADD     => fp_add(rm_3b, vs2_val[i], fp_widen(vs1_val[i])),
         FWV_VSUB     => fp_sub(rm_3b, vs2_val[i], fp_widen(vs1_val[i]))
@@ -401,7 +415,11 @@ function clause execute VFUNARY0(vm, vs2, vfunary0, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_fp_normal(vd, vm, SEW, rm_3b) then return Illegal_Instruction();
+  if illegal_fp_normal(vd, vm, SEW, rm_3b) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
+
   assert(SEW != 8);
 
   let 'n = num_elem;
@@ -418,7 +436,7 @@ function clause execute VFUNARY0(vm, vs2, vfunary0, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match vfunary0 {
         FV_CVT_XU_F      => {
                               let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
@@ -517,6 +535,7 @@ function clause execute VFWUNARY0(vm, vs2, vfwunary0, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
@@ -542,7 +561,7 @@ function clause execute VFWUNARY0(vm, vs2, vfwunary0, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match vfwunary0 {
         FWV_CVT_XU_F     => {
                               let (fflags, elem) : (bits_fflags, bits('o)) = match 'm {
@@ -652,12 +671,14 @@ function clause execute VFNUNARY0(vm, vs2, vfnunary0, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
   if  illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
       not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
   then return Illegal_Instruction();
+
   assert(SEW != 64);
 
   let 'n = num_elem;
@@ -675,7 +696,7 @@ function clause execute VFNUNARY0(vm, vs2, vfnunary0, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match vfnunary0 {
         FNV_CVT_XU_F     => {
                               let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
@@ -794,7 +815,11 @@ function clause execute VFUNARY1(vm, vs2, vfunary1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_fp_normal(vd, vm, SEW, rm_3b) then return Illegal_Instruction();
+  if illegal_fp_normal(vd, vm, SEW, rm_3b) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
+
   assert(SEW != 8);
 
   let 'n = num_elem;
@@ -811,7 +836,7 @@ function clause execute VFUNARY1(vm, vs2, vfunary1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match vfunary1 {
         FVV_VSQRT      => {
                             let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
@@ -876,6 +901,7 @@ function clause execute VFMVFS(vs2, rd) = {
 
   if illegal_fp_vd_unmasked(SEW, rm_3b) | SEW > flen
   then return Illegal_Instruction();
+
   assert(num_elem > 0 & SEW != 8);
 
   let 'n = num_elem;
@@ -926,7 +952,17 @@ function clause execute FVFTYPE(funct6, vm, vs2, rs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_fp_normal(vd, vm, SEW, rm_3b) then return Illegal_Instruction();
+  // "The vslide1up instruction requires that the destination vector
+  // register group does not overlap the source vector register
+  // group. Otherwise, the instruction encoding is reserved."
+  let src_dst_overlap = funct6 == VF_VSLIDE1UP & vs2 == vd;
+
+  if illegal_fp_normal(vd, vm, SEW, rm_3b) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow)) |
+     src_dst_overlap
+  then return Illegal_Instruction();
+
   assert(SEW != 8);
 
   let 'n = num_elem;
@@ -944,7 +980,7 @@ function clause execute FVFTYPE(funct6, vm, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         VF_VADD          => fp_add(rm_3b, vs2_val[i], rs1_val),
         VF_VSUB          => fp_sub(rm_3b, vs2_val[i], rs1_val),
@@ -958,7 +994,6 @@ function clause execute FVFTYPE(funct6, vm, vs2, rs1, vd) = {
         VF_VSGNJN        => (0b1 ^ [rs1_val['m - 1]]) @ vs2_val[i][('m - 2)..0],
         VF_VSGNJX        => ([vs2_val[i]['m - 1]] ^ [rs1_val['m - 1]]) @ vs2_val[i][('m - 2)..0],
         VF_VSLIDE1UP     => {
-                              if vs2 == vd then return Illegal_Instruction();
                               if i == 0 then rs1_val else vs2_val[i - 1]
                             },
         VF_VSLIDE1DOWN   => {
@@ -1021,7 +1056,11 @@ function clause execute FVFMATYPE(funct6, vm, vs2, rs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_fp_normal(vd, vm, SEW, rm_3b) then return Illegal_Instruction();
+  if illegal_fp_normal(vd, vm, SEW, rm_3b) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
+
   assert(SEW != 8);
 
   let 'n = num_elem;
@@ -1039,7 +1078,7 @@ function clause execute FVFMATYPE(funct6, vm, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         VF_VMACC    => fp_muladd(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
         VF_VNMACC   => fp_nmulsub(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
@@ -1091,6 +1130,7 @@ function clause execute FWVFTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
@@ -1117,7 +1157,7 @@ function clause execute FWVFTYPE(funct6, vm, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         FWVF_VADD    => fp_add(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val)),
         FWVF_VSUB    => fp_sub(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val)),
@@ -1161,6 +1201,7 @@ function clause execute FWVFMATYPE(funct6, vm, rs1, vs2, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
@@ -1175,7 +1216,7 @@ function clause execute FWVFMATYPE(funct6, vm, rs1, vs2, vd) = {
   let 'm = SEW;
   let 'o = SEW_widen;
 
-  let vm_val  : bits('n)     = read_vmask(num_elem, vm, zvreg);
+  let vm_val  : bits('n)             = read_vmask(num_elem, vm, zvreg);
   let vd_val  : vector('n, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
   let rs1_val : bits('m)             = get_scalar_fp(rs1, 'm);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
@@ -1187,7 +1228,7 @@ function clause execute FWVFMATYPE(funct6, vm, rs1, vs2, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         FWVF_VMACC   => fp_muladd(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
         FWVF_VNMACC  => fp_nmulsub(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
@@ -1230,10 +1271,13 @@ function clause execute FWFTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen)
+  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
+     not(valid_reg_group(vs2, LMUL_pow_widen)) |
+     not(valid_reg_group(vd, LMUL_pow_widen))
   then return Illegal_Instruction();
 
   assert(SEW >= 16 & SEW_widen <= 64);
@@ -1243,7 +1287,7 @@ function clause execute FWFTYPE(funct6, vm, vs2, rs1, vd) = {
   let 'm = SEW;
   let 'o = SEW_widen;
 
-  let vm_val  : bits('n)     = read_vmask(num_elem, vm, zvreg);
+  let vm_val  : bits('n)             = read_vmask(num_elem, vm, zvreg);
   let vd_val  : vector('n, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
   let rs1_val : bits('m)             = get_scalar_fp(rs1, 'm);
   let vs2_val : vector('n, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vs2);
@@ -1255,7 +1299,7 @@ function clause execute FWFTYPE(funct6, vm, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         FWF_VADD     => fp_add(rm_3b, vs2_val[i], fp_widen(rs1_val)),
         FWF_VSUB     => fp_sub(rm_3b, vs2_val[i], fp_widen(rs1_val))
@@ -1298,7 +1342,11 @@ function clause execute VFMERGE(vs2, rs1, vd) = {
   let num_elem      = get_num_elem(LMUL_pow, SEW); // max(VLMAX,VLEN/SEW))
   let real_num_elem = if LMUL_pow >= 0 then num_elem else num_elem / (0 - LMUL_pow); // VLMAX
 
-  if illegal_fp_vd_masked(vd, SEW, rm_3b) then return Illegal_Instruction();
+  if illegal_fp_vd_masked(vd, SEW, rm_3b) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
+
   assert(SEW != 8);
 
   let 'n = num_elem;
@@ -1321,7 +1369,7 @@ function clause execute VFMERGE(vs2, rs1, vd) = {
       }
     } else {
       // the merge operates on all body elements
-      result[i] = if vm_val[i] == bitone then rs1_val else vs2_val[i]
+      result[i] = if vm_val[i] == 0b1 then rs1_val else vs2_val[i]
     }
   };
 
@@ -1349,7 +1397,10 @@ function clause execute VFMV(rs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_fp_vd_unmasked(SEW, rm_3b) then return Illegal_Instruction();
+  if illegal_fp_vd_unmasked(SEW, rm_3b) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
+
   assert(SEW != 8);
 
   let 'n = num_elem;
@@ -1365,7 +1416,7 @@ function clause execute VFMV(rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then result[i] = rs1_val
+    if mask[i] == 0b1 then result[i] = rs1_val
   };
 
   write_vreg(num_elem, SEW, LMUL_pow, vd, result);
@@ -1391,6 +1442,7 @@ function clause execute VFMVSF(rs1, vd) = {
   let num_elem = get_num_elem(0, SEW);
 
   if illegal_fp_vd_unmasked(SEW, rm_3b) then return Illegal_Instruction();
+
   assert(num_elem > 0 & SEW != 8);
 
   let 'n = num_elem;
@@ -1406,7 +1458,7 @@ function clause execute VFMVSF(rs1, vd) = {
   var result = initial_result;
 
   // one body element
-  if mask[0] == bitone then result[0] = rs1_val;
+  if mask[0] == 0b1 then result[0] = rs1_val;
 
   // others treated as tail elements
   let tail_ag : agtype = get_vtype_vta();

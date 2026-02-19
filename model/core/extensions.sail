@@ -74,6 +74,9 @@ enum clause extension = Ext_H
 mapping clause extensionName = Ext_H <-> "h"
 function clause hartSupports(Ext_H) = false
 
+enum clause extension = Ext_Zibi
+mapping clause extensionName = Ext_Zibi <-> "zibi"
+function clause hartSupports(Ext_Zibi) = sys_enable_experimental_extensions() & config extensions.Zibi.supported
 // Cache block size is 64 bytes
 enum clause extension = Ext_Zic64b
 mapping clause extensionName = Ext_Zic64b <-> "zic64b"
@@ -325,6 +328,10 @@ function clause hartSupports(Ext_Zve64f) = sizeof(elen_exp) >= 6 & vector_suppor
 enum clause extension = Ext_Zve64x
 mapping clause extensionName = Ext_Zve64x <-> "zve64x"
 function clause hartSupports(Ext_Zve64x) = sizeof(elen_exp) >= 6 & vector_support_level >= Integer
+// Vector Integer Absolute Difference
+enum clause extension = Ext_Zvabd
+mapping clause extensionName = Ext_Zvabd <-> "zvabd"
+function clause hartSupports(Ext_Zvabd) = sys_enable_experimental_extensions() & config extensions.Zvabd.supported
 // Vector BF16 Converts
 enum clause extension = Ext_Zvfbfmin
 mapping clause extensionName = Ext_Zvfbfmin <-> "zvfbfmin"
@@ -428,6 +435,10 @@ function clause currentlyEnabled(Ext_Zvksg) = hartSupports(Ext_Zvksg)
 enum clause extension = Ext_Sscofpmf
 mapping clause extensionName = Ext_Sscofpmf <-> "sscofpmf"
 function clause hartSupports(Ext_Sscofpmf) = config extensions.Sscofpmf.supported
+// Supervisor-mode view of the state-enable extension
+enum clause extension = Ext_Ssstateen
+mapping clause extensionName = Ext_Ssstateen <-> "ssstateen"
+function clause hartSupports(Ext_Ssstateen) = config extensions.Stateen.Ssstateen.supported
 // Supervisor-mode Timer Interrupts
 enum clause extension = Ext_Sstc
 mapping clause extensionName = Ext_Sstc <-> "sstc"
@@ -485,6 +496,15 @@ function clause hartSupports(Ext_Svrsw60t59b) = config extensions.Svrsw60t59b.su
 enum clause extension = Ext_Smcntrpmf
 mapping clause extensionName = Ext_Smcntrpmf <-> "smcntrpmf"
 function clause hartSupports(Ext_Smcntrpmf) = config extensions.Smcntrpmf.supported
+// Machine-mode view of the state-enable extension
+enum clause extension = Ext_Smstateen
+mapping clause extensionName = Ext_Smstateen <-> "smstateen"
+function clause hartSupports(Ext_Smstateen) = config extensions.Stateen.Smstateen.supported
+
+// QoS identifiers
+enum clause extension = Ext_Ssqosid
+mapping clause extensionName = Ext_Ssqosid <-> "ssqosid"
+function clause hartSupports(Ext_Ssqosid) = config extensions.Ssqosid.supported
 
 // When adding a new extension X, we need to make sure that if X being supported
 // depends on Y being supported, then the value associated to X is _greater_ than
@@ -533,23 +553,22 @@ function currentlyEnabled_measure(ext : extension) -> int =
     Ext_Zaamo => 1, // > A
     Ext_Zalrsc => 1, // > A
     Ext_Zca => 1, // > C
-    Ext_Zfinx => 1, // > Zicsr
     Ext_Zicntr => 1, // > Zicsr
     Ext_Zihpm => 1, // > Zicsr
     Ext_Zve32x => 1, // > Zvl32b
+    Ext_Smstateen => 1, // > Zicsr
+    Ext_Ssstateen => 1, // > Zicsr
 
     // Note: even though these match the default case, making them explicit to
     // annotate the chain of dependencies
     Ext_Sv39 => 2, // > S
     Ext_Zfh => 2, // > F
-    Ext_Zhinx => 2, // > Zfinx
     Ext_Zvbb => 2, // > Zve32x
     Ext_Zve32f => 2, // > Zve32x
     Ext_Zve64x => 2, // > Zve32x
 
     Ext_Svrsw60t59b => 3, // > Sv39
     Ext_Zfhmin => 3, // > Zfh
-    Ext_Zhinxmin => 3, // > Zhinx
     Ext_Zicfilp => 3, // > get_xLPE
     Ext_Zvbc => 3, // > Zve64x
     Ext_Zve64f => 3, // > Zve64x
@@ -565,6 +584,13 @@ function currentlyEnabled_measure(ext : extension) -> int =
 
     Ext_V => 5, // > Zve64d
     Ext_Zvfhmin => 5, // > Zvfh
+
+    Ext_Zfinx => 9, // > is_zfinx_enabled_by_stateen
+
+    Ext_Zdinx => 10, // > Zdinx
+    Ext_Zhinx => 10, // > Zfinx
+
+    Ext_Zhinxmin => 11, // > Zhinx
 
     _ => 2
   }
@@ -589,6 +615,7 @@ let extensions_ordered_for_isa_string = [
 
   // Z extensions, ordered by category and then alphabetically.
   // Zi
+  Ext_Zibi,
   Ext_Zicbom,
   Ext_Zicbop,
   Ext_Zicboz,
@@ -649,6 +676,9 @@ let extensions_ordered_for_isa_string = [
   Ext_Zksh,
   Ext_Zkt,
 
+  //Zvabd
+  Ext_Zvabd,
+
   // Zvb
   Ext_Zvbb,
   Ext_Zvbc,
@@ -697,6 +727,8 @@ let extensions_ordered_for_isa_string = [
 
   // Supervisor extensions, ordered alphabetically.
   Ext_Sscofpmf,
+  Ext_Ssstateen,
+  Ext_Ssqosid,
   Ext_Sstc,
   Ext_Sstvala,
   Ext_Sstvecd,
@@ -712,4 +744,5 @@ let extensions_ordered_for_isa_string = [
 
   // Machine mode extensions, ordered alphabetically.
   Ext_Smcntrpmf,
+  Ext_Smstateen,
 ]

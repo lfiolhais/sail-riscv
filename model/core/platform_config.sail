@@ -41,42 +41,53 @@ let plat_insns_per_tick : nat1 = config platform.instructions_per_tick
 
 // which exceptions write information into `xtval`
 let illegal_instruction_writes_xtval : bool = config base.xtval_nonzero.illegal_instruction
+let virtual_instruction_writes_xtval : bool = false
 let software_breakpoint_writes_xtval : bool = config base.xtval_nonzero.software_breakpoint
 let hardware_breakpoint_writes_xtval : bool = config base.xtval_nonzero.hardware_breakpoint
 let misaligned_load_writes_xtval : bool = config base.xtval_nonzero.load_address_misaligned
 let load_access_fault_writes_xtval : bool = config base.xtval_nonzero.load_access_fault
 let load_page_fault_writes_xtval : bool = config base.xtval_nonzero.load_page_fault
+let load_guest_page_fault_writes_xtval : bool = false
 let misaligned_samo_writes_xtval : bool = config base.xtval_nonzero.samo_address_misaligned
 let samo_access_fault_writes_xtval : bool = config base.xtval_nonzero.samo_access_fault
 let samo_page_fault_writes_xtval : bool = config base.xtval_nonzero.samo_page_fault
+let samo_guest_page_fault_writes_xtval : bool = false
 let misaligned_fetch_writes_xtval : bool = config base.xtval_nonzero.fetch_address_misaligned
 let fetch_access_fault_writes_xtval : bool = config base.xtval_nonzero.fetch_access_fault
 let fetch_page_fault_writes_xtval : bool = config base.xtval_nonzero.fetch_page_fault
+let fetch_guest_page_fault_writes_xtval : bool = false
 let software_check_fault_writes_xtval : bool = config base.xtval_nonzero.software_check
 let reserved_exceptions_write_xtval : bool = config base.xtval_nonzero.reserved_exceptions
 
-// Defines the policy for handling reserved behaviors.
+// Define the policy for handling reserved behaviors.
+
 enum AmocasOddRegisterReservedBehavior = {
   AMOCAS_Fatal,
   AMOCAS_Illegal,
 }
 
-mapping AmocasOddRegisterReservedBehavior_str : AmocasOddRegisterReservedBehavior <-> string = {
-  AMOCAS_Fatal   <-> "AMOCAS_Fatal",
-  AMOCAS_Illegal <-> "AMOCAS_Illegal",
+enum FcsrRmReservedBehavior = {
+  Fcsr_RM_Fatal,
+  Fcsr_RM_Illegal,
 }
-overload to_str = {AmocasOddRegisterReservedBehavior_str}
 
 enum PmpWriteOnlyReservedBehavior = {
   PMP_Fatal,
   PMP_ClearPermissions,
 }
 
-mapping PmpWriteOnlyReservedBehavior_str : PmpWriteOnlyReservedBehavior <-> string = {
-  PMP_Fatal <-> "PMP_Fatal",
-  PMP_ClearPermissions <-> "PMP_ClearPermissions",
+enum XenvcfgCbieReservedBehavior = {
+  Xenvcfg_Fatal,
+  Xenvcfg_ClearPermissions,
 }
-overload to_str = {PmpWriteOnlyReservedBehavior_str}
+
+enum RV32ZdinxOddRegisterReservedBehavior = {
+  Zdinx_Fatal,
+  Zdinx_Illegal,
+}
 
 let amocas_odd_register_reserved_behavior : AmocasOddRegisterReservedBehavior = config base.reserved_behavior.amocas_odd_register
+let fcsr_rm_reserved_behavior : FcsrRmReservedBehavior = config base.reserved_behavior.fcsr_rm
 let pmp_write_only_reserved_behavior : PmpWriteOnlyReservedBehavior = config base.reserved_behavior.pmpcfg_write_only
+let xenvcfg_cbie_reserved_behavior : XenvcfgCbieReservedBehavior = config base.reserved_behavior.xenvcfg_cbie
+let rv32zdinx_odd_register_reserved_behavior : RV32ZdinxOddRegisterReservedBehavior = config base.reserved_behavior.rv32zdinx_odd_register

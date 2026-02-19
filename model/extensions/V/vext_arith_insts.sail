@@ -51,15 +51,40 @@ function clause execute VVTYPE(funct6, vm, vs2, vs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_normal(vd, vm) then return Illegal_Instruction();
+  // "The vrgatherei16.vv form uses SEW/LMUL for the data in vs2 but
+  // EEW=16 and EMUL = (16/SEW)*LMUL for the indices in vs1."  Other
+  // than that, all the other instructions here use a uniform SEW/LMUL
+  // for their vector operands.  Also, "For any vrgather instruction,
+  // the destination vector register group cannot overlap with the
+  // source vector register groups, otherwise the instruction encoding
+  // is reserved."
+
+  // Check for source destination overlaps for vrgather instructions.
+  let src_dst_overlap : bool = if funct6 == VV_VRGATHER | funct6 == VV_VRGATHEREI16
+                               then vs1 == vd | vs2 == vd
+                               else false;
+
+  let vs1_emul_pow = if funct6 == VV_VRGATHEREI16 then 4 + LMUL_pow - SEW_pow else LMUL_pow;
+
+  if illegal_normal(vd, vm) |
+     not(valid_reg_overlap(vs1, vd, vs1_emul_pow, LMUL_pow)) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     src_dst_overlap
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
 
-  let vm_val  : bits('n)     = read_vmask(num_elem, vm, zvreg);
-  let vs1_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
+  let vm_val  : bits('n)             = read_vmask(num_elem, vm, zvreg);
+  let vs1_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1); // not used for VV_VRGATHEREI16.
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
   let vd_val  : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
+
+  // See above for the vs1 operand of vrgatherei16.vv.  This is a
+  // different variable from `vs1_val` due to its different type.
+  let vs1_val_vrgatherei16 : vector('n, bits(16)) = if funct6 == VV_VRGATHEREI16
+                                                    then read_vreg(num_elem, 16, vs1_emul_pow, vs1)
+                                                    else vector_init(zeros());
 
   let (initial_result, mask) : (vector('n, bits('m)), bits('n)) = match init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val) {
     Ok(v)   => v,
@@ -68,7 +93,7 @@ function clause execute VVTYPE(funct6, vm, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         VV_VADD          => vs2_val[i] + vs1_val[i],
         VV_VSUB          => vs2_val[i] - vs1_val[i],
@@ -117,7 +142,6 @@ function clause execute VVTYPE(funct6, vm, vs2, vs1, vd) = {
         VV_VMAXU         => to_bits_unsafe(SEW, max(unsigned(vs2_val[i]), unsigned(vs1_val[i]))),
         VV_VMAX          => to_bits_unsafe(SEW, max(signed(vs2_val[i]), signed(vs1_val[i]))),
         VV_VRGATHER      => {
-                              if (vs1 == vd | vs2 == vd) then return Illegal_Instruction();
                               let idx = unsigned(vs1_val[i]);
                               assert(LMUL_pow + vlen_exp - SEW_pow >= 0);
                               let VLMAX = 2 ^ (LMUL_pow + vlen_exp - SEW_pow);
@@ -125,10 +149,7 @@ function clause execute VVTYPE(funct6, vm, vs2, vs1, vd) = {
                               if idx < VLMAX then vs2_val[idx] else zeros()
                             },
         VV_VRGATHEREI16  => {
-                              if (vs1 == vd | vs2 == vd) then return Illegal_Instruction();
-                              // vrgatherei16.vv uses SEW/LMUL for the data in vs2 but EEW=16 and EMUL = (16/SEW)*LMUL for the indices in vs1
-                              let vs1_new : vector('n, bits(16)) = read_vreg(num_elem, 16, 4 + LMUL_pow - SEW_pow, vs1);
-                              let idx = unsigned(vs1_new[i]);
+                              let idx = unsigned(vs1_val_vrgatherei16[i]);
                               assert(LMUL_pow + vlen_exp - SEW_pow >= 0);
                               let VLMAX = 2 ^ (LMUL_pow + vlen_exp - SEW_pow);
                               assert(VLMAX <= 'n);
@@ -188,11 +209,13 @@ function clause execute NVSTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
   if  illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
-      not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
+      not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow)) |
+      not(valid_reg_group(vs1, LMUL_pow))
   then return Illegal_Instruction();
 
   assert(SEW_widen <= 64);
@@ -202,7 +225,7 @@ function clause execute NVSTYPE(funct6, vm, vs2, vs1, vd) = {
   let 'm = SEW;
   let 'o = SEW_widen;
 
-  let vm_val  : bits('n)     = read_vmask(num_elem, vm, zvreg);
+  let vm_val  : bits('n)             = read_vmask(num_elem, vm, zvreg);
   let vd_val  : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
   let vs1_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
   let vs2_val : vector('n, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vs2);
@@ -214,7 +237,7 @@ function clause execute NVSTYPE(funct6, vm, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         NVS_VNSRL  => {
                         let shift_amount = get_shift_amount(vs1_val[i], SEW_widen);
@@ -261,11 +284,13 @@ function clause execute NVTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
   if  illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
-      not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
+      not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow)) |
+      not(valid_reg_group(vs1, LMUL_pow))
   then return Illegal_Instruction();
 
   assert(SEW_widen <= 64);
@@ -275,7 +300,7 @@ function clause execute NVTYPE(funct6, vm, vs2, vs1, vd) = {
   let 'm = SEW;
   let 'o = SEW_widen;
 
-  let vm_val  : bits('n)     = read_vmask(num_elem, vm, zvreg);
+  let vm_val  : bits('n)             = read_vmask(num_elem, vm, zvreg);
   let vd_val  : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
   let vs1_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
   let vs2_val : vector('n, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vs2);
@@ -287,7 +312,7 @@ function clause execute NVTYPE(funct6, vm, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       let shift_amount = get_shift_amount(vs1_val[i], SEW_widen);
       let rounding_incr = get_fixed_rounding_incr(vs2_val[i], shift_amount);
       result[i] = match funct6 {
@@ -336,12 +361,16 @@ function clause execute MASKTYPEV(vs2, vs1, vd) = {
   let num_elem      = get_num_elem(LMUL_pow, SEW); // max(VLMAX,VLEN/SEW))
   let real_num_elem = if LMUL_pow >= 0 then num_elem else num_elem / (0 - LMUL_pow); // VLMAX
 
-  if illegal_vd_masked(vd) then return Illegal_Instruction();
+  if illegal_vd_masked(vd) |
+     not(valid_reg_group(vs1, LMUL_pow)) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
 
-  let vm_val  : bits('n)     = read_vmask(num_elem, 0b0, zvreg);
+  let vm_val  : bits('n)             = read_vmask(num_elem, 0b0, zvreg);
   let vs1_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
   let vd_val  : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
@@ -358,7 +387,7 @@ function clause execute MASKTYPEV(vs2, vs1, vd) = {
       }
     } else {
       // the merge operates on all body elements
-      result[i] = if vm_val[i] == bitone then vs1_val[i] else vs2_val[i]
+      result[i] = if vm_val[i] == 0b1 then vs1_val[i] else vs2_val[i]
     }
   };
 
@@ -383,7 +412,10 @@ function clause execute MOVETYPEV(vs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_vd_unmasked() then return Illegal_Instruction();
+  if illegal_vd_unmasked() |
+     not(valid_reg_group(vs1, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
@@ -398,7 +430,7 @@ function clause execute MOVETYPEV(vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then result[i] = vs1_val[i]
+    if mask[i] == 0b1 then result[i] = vs1_val[i]
   };
 
   write_vreg(num_elem, SEW, LMUL_pow, vd, result);
@@ -445,7 +477,10 @@ function clause execute VXTYPE(funct6, vm, vs2, rs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_normal(vd, vm) then return Illegal_Instruction();
+  if illegal_normal(vd, vm) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
@@ -462,7 +497,7 @@ function clause execute VXTYPE(funct6, vm, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         VX_VADD    => vs2_val[i] + rs1_val,
         VX_VSUB    => vs2_val[i] - rs1_val,
@@ -564,6 +599,7 @@ function clause execute NXSTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
@@ -590,7 +626,7 @@ function clause execute NXSTYPE(funct6, vm, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         NXS_VNSRL  => {
                         let shift_amount = get_shift_amount(rs1_val, SEW_widen);
@@ -637,6 +673,7 @@ function clause execute NXTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
@@ -663,7 +700,7 @@ function clause execute NXTYPE(funct6, vm, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       let shift_amount = get_shift_amount(rs1_val, SEW_widen);
       let rounding_incr = get_fixed_rounding_incr(vs2_val[i], shift_amount);
       result[i] = match funct6 {
@@ -714,7 +751,19 @@ function clause execute VXSG(funct6, vm, vs2, rs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_normal(vd, vm) then return Illegal_Instruction();
+  // For `vslideup` and `vrgather`, "the destination vector register
+  // group cannot overlap with the source vector register groups,
+  // otherwise the instruction encoding is reserved."
+  let src_dst_overlap : bool = match funct6 {
+    VX_VSLIDEUP   => vd == vs2,
+    VX_VSLIDEDOWN => false,
+    VX_VRGATHER   => vd == vs2,
+  };
+  if illegal_normal(vd, vm) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow)) |
+     src_dst_overlap
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
@@ -731,10 +780,9 @@ function clause execute VXSG(funct6, vm, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         VX_VSLIDEUP    => {
-                            if (vs2 == vd) then return Illegal_Instruction();
                             if i >= rs1_val then vs2_val[i - rs1_val] else vd_val[i]
                           },
         VX_VSLIDEDOWN  => {
@@ -744,7 +792,6 @@ function clause execute VXSG(funct6, vm, vs2, rs1, vd) = {
                             if i + rs1_val < VLMAX then vs2_val[i + rs1_val] else zeros()
                           },
         VX_VRGATHER    => {
-                            if (vs2 == vd) then return Illegal_Instruction();
                             assert(LMUL_pow + vlen_exp - SEW_pow >= 0);
                             let VLMAX = 2 ^ (LMUL_pow + vlen_exp - SEW_pow);
                             assert(VLMAX > 0 & VLMAX <= 'n);
@@ -781,13 +828,17 @@ function clause execute MASKTYPEX(vs2, rs1, vd) = {
     Ok(v)   => v,
     Err(()) => return Illegal_Instruction()
   };
+
   let end_element   = get_end_element();
   let SEW           = get_sew();
   let LMUL_pow      = get_lmul_pow();
   let num_elem      = get_num_elem(LMUL_pow, SEW); // max(VLMAX,VLEN/SEW))
   let real_num_elem = if LMUL_pow >= 0 then num_elem else num_elem / (0 - LMUL_pow); // VLMAX
 
-  if illegal_vd_masked(vd) then return Illegal_Instruction();
+  if illegal_vd_masked(vd) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
@@ -809,7 +860,7 @@ function clause execute MASKTYPEX(vs2, rs1, vd) = {
       }
     } else {
       // the merge operates on all body elements
-      result[i] = if vm_val[i] == bitone then rs1_val else vs2_val[i]
+      result[i] = if vm_val[i] == 0b1 then rs1_val else vs2_val[i]
     }
   };
 
@@ -834,7 +885,8 @@ function clause execute MOVETYPEX(rs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_vd_unmasked() then return Illegal_Instruction();
+  if illegal_vd_unmasked() | not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
@@ -849,7 +901,7 @@ function clause execute MOVETYPEX(rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then result[i] = rs1_val
+    if mask[i] == 0b1 then result[i] = rs1_val
   };
 
   write_vreg(num_elem, SEW, LMUL_pow, vd, result);
@@ -888,7 +940,10 @@ function clause execute VITYPE(funct6, vm, vs2, simm, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_normal(vd, vm) then return Illegal_Instruction();
+  if illegal_normal(vd, vm) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
@@ -905,7 +960,7 @@ function clause execute VITYPE(funct6, vm, vs2, simm, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         VI_VADD    => vs2_val[i] + imm_val,
         VI_VRSUB   => imm_val - vs2_val[i],
@@ -983,6 +1038,7 @@ function clause execute NISTYPE(funct6, vm, vs2, uimm, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
@@ -1009,7 +1065,7 @@ function clause execute NISTYPE(funct6, vm, vs2, uimm, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         NIS_VNSRL  => {
                         let shift_amount = get_shift_amount(imm_val, SEW_widen);
@@ -1056,6 +1112,7 @@ function clause execute NITYPE(funct6, vm, vs2, uimm, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
@@ -1082,7 +1139,7 @@ function clause execute NITYPE(funct6, vm, vs2, uimm, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       let shift_amount = get_shift_amount(imm_val, SEW_widen);
       let rounding_incr = get_fixed_rounding_incr(vs2_val[i], shift_amount);
       result[i] = match funct6 {
@@ -1133,7 +1190,19 @@ function clause execute VISG(funct6, vm, vs2, simm, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_normal(vd, vm) then return Illegal_Instruction();
+  // For `vslideup` and `vrgather`, "the destination vector register
+  // group cannot overlap with the source vector register groups,
+  // otherwise the instruction encoding is reserved."
+  let src_dst_overlap : bool = match funct6 {
+    VI_VSLIDEUP   => vd == vs2,
+    VI_VSLIDEDOWN => false,
+    VI_VRGATHER   => vd == vs2,
+  };
+  if illegal_normal(vd, vm) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow)) |
+     src_dst_overlap
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
@@ -1150,10 +1219,9 @@ function clause execute VISG(funct6, vm, vs2, simm, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         VI_VSLIDEUP    => {
-                            if (vs2 == vd) then return Illegal_Instruction();
                             if i >= imm_val then vs2_val[i - imm_val] else vd_val[i]
                           },
         VI_VSLIDEDOWN  => {
@@ -1163,7 +1231,6 @@ function clause execute VISG(funct6, vm, vs2, simm, vd) = {
                             if i + imm_val < VLMAX then vs2_val[i + imm_val] else zeros()
                           },
         VI_VRGATHER    => {
-                            if (vs2 == vd) then return Illegal_Instruction();
                             assert(LMUL_pow + vlen_exp - SEW_pow >= 0);
                             let VLMAX = 2 ^ (LMUL_pow + vlen_exp - SEW_pow);
                             assert(VLMAX > 0 & VLMAX <= 'n);
@@ -1200,13 +1267,17 @@ function clause execute MASKTYPEI(vs2, simm, vd) = {
     Ok(v)   => v,
     Err(()) => return Illegal_Instruction()
   };
+
   let end_element   = get_end_element();
   let SEW           = get_sew();
   let LMUL_pow      = get_lmul_pow();
   let num_elem      = get_num_elem(LMUL_pow, SEW); // max(VLMAX,VLEN/SEW))
   let real_num_elem = if LMUL_pow >= 0 then num_elem else num_elem / (0 - LMUL_pow); // VLMAX
 
-  if illegal_vd_masked(vd) then return Illegal_Instruction();
+  if illegal_vd_masked(vd) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
@@ -1228,7 +1299,7 @@ function clause execute MASKTYPEI(vs2, simm, vd) = {
       }
     } else {
       // the merge operates on all body elements
-      result[i] = if vm_val[i] == bitone then imm_val else vs2_val[i]
+      result[i] = if vm_val[i] == 0b1 then imm_val else vs2_val[i]
     }
   };
 
@@ -1253,7 +1324,8 @@ function clause execute MOVETYPEI(vd, simm) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_vd_unmasked() then return Illegal_Instruction();
+  if illegal_vd_unmasked() | not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
@@ -1268,7 +1340,7 @@ function clause execute MOVETYPEI(vd, simm) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then result[i] = imm_val
+    if mask[i] == 0b1 then result[i] = imm_val
   };
 
   write_vreg(num_elem, SEW, LMUL_pow, vd, result);
@@ -1314,6 +1386,10 @@ function clause execute VMVRTYPE(vs2, nreg, vd) = {
     4 => 2,
     8 => 3,
   };
+
+  if not(valid_reg_group(vs2, EMUL_pow)) | not(valid_reg_group(vd, EMUL_pow))
+  then return Illegal_Instruction();
+
   let num_elem = get_num_elem(EMUL_pow, SEW);
   let 'n = num_elem;
   let 'm = SEW;
@@ -1370,12 +1446,16 @@ function clause execute MVVTYPE(funct6, vm, vs2, vs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_normal(vd, vm) then return Illegal_Instruction();
+  if illegal_normal(vd, vm) |
+     not(valid_reg_group(vs1, LMUL_pow)) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
 
-  let vm_val  : bits('n)     = read_vmask(num_elem, vm, zvreg);
+  let vm_val  : bits('n)             = read_vmask(num_elem, vm, zvreg);
   let vs1_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
   let vd_val  : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
@@ -1387,7 +1467,7 @@ function clause execute MVVTYPE(funct6, vm, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         MVV_VAADDU   => {
                           let result_add = zero_extend('m + 1, vs2_val[i]) + zero_extend('m + 1, vs1_val[i]);
@@ -1491,7 +1571,11 @@ function clause execute MVVMATYPE(funct6, vm, vs2, vs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_normal(vd, vm) then return Illegal_Instruction();
+  if illegal_normal(vd, vm) |
+     not(valid_reg_group(vs1, LMUL_pow)) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
@@ -1508,7 +1592,7 @@ function clause execute MVVMATYPE(funct6, vm, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         MVV_VMACC  => mult_to_bits_half(SEW, Signed, Signed, vs1_val[i], vs2_val[i], Low) + vd_val[i],
         MVV_VNMSAC => vd_val[i] - mult_to_bits_half(SEW, Signed, Signed, vs1_val[i], vs2_val[i], Low),
@@ -1554,6 +1638,7 @@ function clause execute WVVTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
@@ -1581,7 +1666,7 @@ function clause execute WVVTYPE(funct6, vm, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         WVV_VADD    => to_bits_unsafe(SEW_widen, signed(vs2_val[i]) + signed(vs1_val[i])),
         WVV_VSUB    => to_bits_unsafe(SEW_widen, signed(vs2_val[i]) - signed(vs1_val[i])),
@@ -1631,11 +1716,13 @@ function clause execute WVTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
   if  illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
-      not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen))
+      not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen)) |
+      not(valid_reg_group(vs2, LMUL_pow_widen))
   then return Illegal_Instruction();
 
   assert(SEW_widen <= 64);
@@ -1657,7 +1744,7 @@ function clause execute WVTYPE(funct6, vm, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         WV_VADD  => to_bits_unsafe(SEW_widen, signed(vs2_val[i]) + signed(vs1_val[i])),
         WV_VSUB  => to_bits_unsafe(SEW_widen, signed(vs2_val[i]) - signed(vs1_val[i])),
@@ -1701,6 +1788,7 @@ function clause execute WMVVTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
@@ -1728,7 +1816,7 @@ function clause execute WMVVTYPE(funct6, vm, vs2, vs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         WMVV_VWMACC   => to_bits_unsafe(SEW_widen, signed(vs1_val[i]) * signed(vs2_val[i])) + vd_val[i],
         WMVV_VWMACCU  => to_bits_unsafe(SEW_widen, unsigned(vs1_val[i]) * unsigned(vs2_val[i])) + vd_val[i],
@@ -1770,9 +1858,10 @@ mapping clause encdec = VEXTTYPE(funct6, vm, vs2, vd)
      | (currentlyEnabled(Ext_Zve64x) & get_sew() <= 64)
 
 function clause execute VEXTTYPE(funct6, vm, vs2, vd) = {
-  let SEW = get_sew();
+  let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_frac_pow : {1, 2, 3} = match funct6 {
     VEXT2_ZVF2  =>  1,
     VEXT2_SVF2  =>  1,
@@ -1805,7 +1894,7 @@ function clause execute VEXTTYPE(funct6, vm, vs2, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         VEXT2_ZVF2 => zero_extend(vs2_val[i]),
         VEXT2_SVF2 => sign_extend(vs2_val[i]),
@@ -1849,6 +1938,7 @@ function clause execute VMVXS(vs2, rd) = {
   if illegal_vd_unmasked() then return Illegal_Instruction();
 
   assert(num_elem > 0);
+
   let 'n = num_elem;
   let 'm = SEW;
 
@@ -1878,12 +1968,17 @@ function clause execute MVVCOMPRESS(vs2, vs1, vd) = {
     Err(()) => return Illegal_Instruction()
   };
   let end_element = get_end_element();
-  let SEW = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
+  let SEW         = get_sew();
+  let LMUL_pow    = get_lmul_pow();
+  let num_elem    = get_num_elem(LMUL_pow, SEW);
 
   // vcompress should always be executed with a vstart of 0
-  if start_element != 0 | vs1 == vd | vs2 == vd | illegal_vd_unmasked()
+  if start_element != 0 |
+     vs1 == vd |
+     vs2 == vd |
+     illegal_vd_unmasked() |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
   then return Illegal_Instruction();
 
   let 'n = num_elem;
@@ -1898,7 +1993,7 @@ function clause execute MVVCOMPRESS(vs2, vs1, vd) = {
   var vd_idx : nat = 0;
   foreach (i from 0 to (num_elem - 1)) {
     if i <= end_element then {
-      if vs1_val[i] == bitone then {
+      if vs1_val[i] == 0b1 then {
         let 'p = vd_idx;
         assert('p < 'n);
         result['p] = vs2_val[i];
@@ -1957,7 +2052,15 @@ function clause execute MVXTYPE(funct6, vm, vs2, rs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_normal(vd, vm) then return Illegal_Instruction();
+  // "The vslide1up instruction requires that the destination vector
+  // register group does not overlap the source vector register
+  // group. Otherwise, the instruction encoding is reserved."
+  let src_dst_overlap = funct6 == MVX_VSLIDE1UP & vs2 == vd;
+  if illegal_normal(vd, vm) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow)) |
+     src_dst_overlap
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
@@ -1974,7 +2077,7 @@ function clause execute MVXTYPE(funct6, vm, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         MVX_VAADDU       => {
                               let result_add = zero_extend('m + 1, vs2_val[i]) + zero_extend('m + 1, rs1_val);
@@ -2089,7 +2192,10 @@ function clause execute MVXMATYPE(funct6, vm, vs2, rs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_normal(vd, vm) then return Illegal_Instruction();
+  if illegal_normal(vd, vm) |
+     not(valid_reg_group(vs2, LMUL_pow)) |
+     not(valid_reg_group(vd, LMUL_pow))
+  then return Illegal_Instruction();
 
   let 'n = num_elem;
   let 'm = SEW;
@@ -2106,7 +2212,7 @@ function clause execute MVXMATYPE(funct6, vm, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         MVX_VMACC  => mult_to_bits_half(SEW, Signed, Signed, rs1_val, vs2_val[i], Low) + vd_val[i],
         MVX_VNMSAC => vd_val[i] - mult_to_bits_half(SEW, Signed, Signed, rs1_val, vs2_val[i], Low),
@@ -2153,6 +2259,7 @@ function clause execute WVXTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
@@ -2179,7 +2286,7 @@ function clause execute WVXTYPE(funct6, vm, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         WVX_VADD    => to_bits_unsafe(SEW_widen, signed(vs2_val[i]) + signed(rs1_val)),
         WVX_VSUB    => to_bits_unsafe(SEW_widen, signed(vs2_val[i]) - signed(rs1_val)),
@@ -2229,10 +2336,13 @@ function clause execute WXTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen)
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
+     not(valid_reg_group(vs2, LMUL_pow_widen)) |
+     not(valid_reg_group(vd, LMUL_pow_widen))
   then return Illegal_Instruction();
 
   assert(SEW_widen <= 64);
@@ -2254,7 +2364,7 @@ function clause execute WXTYPE(funct6, vm, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         WX_VADD  => to_bits_unsafe(SEW_widen, signed(vs2_val[i]) + signed(rs1_val)),
         WX_VSUB  => to_bits_unsafe(SEW_widen, signed(vs2_val[i]) - signed(rs1_val)),
@@ -2299,6 +2409,7 @@ function clause execute WMVXTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW      = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW);
+
   let SEW_widen      = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
@@ -2313,7 +2424,7 @@ function clause execute WMVXTYPE(funct6, vm, vs2, rs1, vd) = {
   let 'm = SEW;
   let 'o = SEW_widen;
 
-  let vm_val  : bits('n)     = read_vmask(num_elem, vm, zvreg);
+  let vm_val  : bits('n)             = read_vmask(num_elem, vm, zvreg);
   let vd_val  : vector('n, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
   let rs1_val : bits('m)             = get_scalar(rs1, SEW);
   let vs2_val : vector('n, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
@@ -2325,7 +2436,7 @@ function clause execute WMVXTYPE(funct6, vm, vs2, rs1, vd) = {
   var result = initial_result;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] == bitone then {
+    if mask[i] == 0b1 then {
       result[i] = match funct6 {
         WMVX_VWMACCU  => (to_bits_unsafe(SEW_widen, unsigned(rs1_val) * unsigned(vs2_val[i]) )) + vd_val[i],
         WMVX_VWMACC   => (to_bits_unsafe(SEW_widen, signed(rs1_val) * signed(vs2_val[i]) )) + vd_val[i],
@@ -2365,6 +2476,7 @@ function clause execute VMVSX(rs1, vd) = {
   if illegal_vd_unmasked() then return Illegal_Instruction();
 
   assert(num_elem > 0);
+
   let 'n = num_elem;
   let 'm = SEW;
 
@@ -2378,7 +2490,7 @@ function clause execute VMVSX(rs1, vd) = {
   var result = initial_result;
 
   // one body element
-  if mask[0] == bitone then result[0] = rs1_val;
+  if mask[0] == 0b1 then result[0] = rs1_val;
 
   // others treated as tail elements
   let tail_ag : agtype = get_vtype_vta();

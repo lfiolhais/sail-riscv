@@ -35,12 +35,23 @@ executable binary to give an RISC-V emulator.
 
 When running this emulator on a RISC-V ELF binary (`test.elf`), the
 emulator can also be a provided a configuration file in JSON format
-(named `dut_config.json` above); if no configuration file is provided,
-a default RV64 configuration is assumed. The Sail compiler also
-generates a JSON schema (`sail_riscv_config_schema.json`) for the
-configuration file from the Sail sources; every configuration file is
-validated against this schema before use. More information on using
-the emulator is available using its `-h` help command-line option.
+(named `dut_config.json` above). If no configuration file is
+provided, a default RV64 configuration is assumed; this default
+configuration can be printed using the `--print-default-config` option
+to the `sail_riscv_sim` emulator. A _template_ for the configuration
+files that are used to test the model is
+[here](config/config.json.in); this template will need to be edited to
+match a desired configuration.
+
+The Sail compiler also generates a JSON schema
+(`sail_riscv_config_schema.json`) for the configuration file from the
+Sail sources; every configuration file is validated against this
+schema before use. This file will be in the directory containing the
+build artifacts after a build of the model, and is also available in
+the [binary releases](#using-the-binary-releases) of the model.
+
+More information on using the emulator is available using its `-h`
+help command-line option.
 
 The Sail model can also be used to generate `JSON` and `HTML`
 artifacts for documentation. A prototype of their use to annotate the
@@ -99,6 +110,11 @@ using `build/c_emulator/sail_riscv_sim --print-default-config`. To
 use a custom configuration, save the default configuration into a
 file, edit it as needed, and pass it to the simulator using the
 `--config` option.
+
+To override only a small subset of options while using the default configuration
+or a custom configuration file as a base, the `--config-override` option can be
+used. This option allows one or more additional JSON configuration files to be specified,
+whose fields take precedence over those in the base configuration.
 
 Information on other options for the simulator is available from
 `build/c_emulator/sail_riscv_sim -h`.
@@ -170,7 +186,9 @@ For booting operating system images, see the information under the
 - Zvkt extension for vector data independent execution latency, v1.0 (no impact on model)
 - Machine, Supervisor, and User modes
 - Smcntrpmf extension for cycle and instret privilege mode filtering, v1.0
+- Smstateen/Ssstateen extensions for fine-grained privileged state access control, v1.0
 - Sscofpmf extension for Count Overflow and Mode-Based Filtering, v1.0
+- Ssqosid extension for Quality-of-Service (QoS) Identifiers, v1.0
 - Sstc extension for Supervisor-mode Timer Interrupts, v1.0
 - Sstvala extension for `stval` provides all needed values, v1.0
 - Sstvecd extension for Direct mode support in `stvec.MODE`, v1.0
@@ -182,9 +200,10 @@ For booting operating system images, see the information under the
 - Physical Memory Protection (PMP)
 - Static memory regions with some static PMAs (Physical Memory Attributes)
 
-<!-- Uncomment the following section when unratified extensions are added
 The following unratified extensions are supported and can be enabled using the `--enable-experimental-extensions` flag:
--  -->
+
+- Zibi extension for conditional branches with immediate operands, v0.6
+- Zvabd extension for vector absolute difference, v0.7
 
 **For a list of unsupported extensions and features, see the [Extension Roadmap](https://github.com/riscv/sail-riscv/wiki/Extension-Roadmap).**
 
@@ -218,8 +237,8 @@ function clause execute ITYPE(imm, rs1, rd, op) = {
   let immext : xlenbits = sign_extend(imm);
   X(rd) = match op {
     ADDI  => X(rs1) + immext,
-    SLTI  => zero_extend(bool_to_bits(X(rs1) <_s immext)),
-    SLTIU => zero_extend(bool_to_bits(X(rs1) <_u immext)),
+    SLTI  => zero_extend(bool_to_bit(X(rs1) <_s immext)),
+    SLTIU => zero_extend(bool_to_bit(X(rs1) <_u immext)),
     ANDI  => X(rs1) & immext,
     ORI   => X(rs1) | immext,
     XORI  => X(rs1) ^ immext
