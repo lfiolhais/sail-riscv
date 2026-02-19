@@ -21,7 +21,7 @@ function is_algorithm_supported(algo: bits(11)) -> bool = {
 }
 
 // Return size of algorithm in bits
-function algorithm_size(algo: bits(11)) -> int = {
+function algorithm_size(algo: bits(11)) -> nat = {
     let algo_type = acealgorithmType_bits(algo[3..0]);
     let algo_mode = acealgorithmModeType_bits(algo[7..4]);
 
