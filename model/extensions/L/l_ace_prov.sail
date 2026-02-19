@@ -41,7 +41,7 @@ function clause execute ACEPROV(imm, xs, kd) = {
   };
 
   set_aceerror(aceerrorType_bits(ACEE_NoError));
-  Lm(kd) = [lrm with _allocated = bitone, _root_id = lregidx_bits(kd)];
+  Lm(kd) = [lrm with _provisioned = bitone, _allocated = bitone, _root_id = lregidx_bits(kd)];
 
   RETIRE_SUCCESS
 }

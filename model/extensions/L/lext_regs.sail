@@ -297,7 +297,7 @@ function rmL (Lregno(r) : lregno) -> Lmetadata = {
   }
 }
 
-val lmreg_write_callback = pure {cpp: "lmreg_write_callback"} : (lregidx, bits(235)) -> unit
+val lmreg_write_callback = pure {cpp: "lmreg_write_callback"} : (lregidx, bits(236)) -> unit
 function lmreg_write_callback(_) = ()
 
 function wmL (Lregno(r) : lregno, m : Lmetadata) -> unit = {
@@ -356,8 +356,9 @@ function l_dealloc_siblings(r : lregno) -> unit = {
     foreach (i from 0 to (n_siblings - 1)) {
         let lrm_sibling_id = l_get_sibling(lrm, Lregno(i));
         let lrm_sibling = [ Mk_Lmetadata(zeros()) with
-            _allocated = bitzero,
-            _n_siblings = to_bits(5, 0),
+            _provisioned = bitzero,
+            _allocated   = bitzero,
+            _n_siblings  = to_bits(5, 0),
         ];
         wmL_bits(lrm_sibling_id, lrm_sibling);
     }
@@ -367,7 +368,7 @@ function l_dealloc_siblings_bits(i: lregidx) -> unit = l_dealloc_siblings(lregid
 
 function lrm_dealloc(kd: lregidx) -> Lmetadata = {
   // Zero internal `_allocated` flag
-  Lm(kd) = [Lm(kd) with _allocated = bitzero];
+  Lm(kd) = [Lm(kd) with _allocated = bitzero, _provisioned = bitzero];
   // Read the metadata register but now the register is no longer allocated
   let lrm = Lm(kd);
 
