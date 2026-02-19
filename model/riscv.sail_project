@@ -266,6 +266,8 @@ extensions {
   }
 
   L {
+    requires core
+
     L_core {
       before sys
       files
@@ -279,6 +281,7 @@ extensions {
       files
         extensions/L/lext_base_insts.sail,
         extensions/L/l_ace_prov.sail,
+        extensions/L/l_ace_reset.sail
     }
   }
 

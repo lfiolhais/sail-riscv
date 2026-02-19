@@ -20,3 +20,12 @@ mapping clause encdec = ACEPROV(imm, xs, kd)
 
 mapping clause assembly = ACEPROV(imm, xs, kd)
   <-> "ace.prov" ^ spc() ^ lreg_name(kd) ^ sep()  ^ hex_bits_signed_12(imm) ^ "(" ^ reg_name(xs) ^ ")"
+// ******************* ace.reset *********************
+union clause instruction = ACERESET: (unit)
+
+mapping clause encdec = ACERESET()
+  <-> 0b0000000 @ 0b00000 @ 0b00000 @ 0b101 @ 0b00000 @ 0b1011011
+  when (currentlyEnabled(Ext_L))
+
+mapping clause assembly = ACERESET()
+  <-> "ace.reset"
