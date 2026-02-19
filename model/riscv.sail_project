@@ -281,7 +281,8 @@ extensions {
       files
         extensions/L/lext_base_insts.sail,
         extensions/L/l_ace_prov.sail,
-        extensions/L/l_ace_reset.sail
+        extensions/L/l_ace_reset.sail,
+        extensions/L/l_ace_clear.sail,
     }
   }
 

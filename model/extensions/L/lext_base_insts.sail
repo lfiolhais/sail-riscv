@@ -20,6 +20,18 @@ mapping clause encdec = ACEPROV(imm, xs, kd)
 
 mapping clause assembly = ACEPROV(imm, xs, kd)
   <-> "ace.prov" ^ spc() ^ lreg_name(kd) ^ sep()  ^ hex_bits_signed_12(imm) ^ "(" ^ reg_name(xs) ^ ")"
+
+// ******************* ace.clear *********************
+union clause instruction = ACECLEAR: (lregidx)
+
+// TODO Implement indirect CR access
+mapping clause encdec = ACECLEAR(kd)
+  <-> 0b0000000 @ 0b00000 @ 0b00000 @ 0b100 @ encdec_lreg(kd) @ 0b1011011
+  when (currentlyEnabled(Ext_L))
+
+mapping clause assembly = ACECLEAR(kd)
+  <-> "ace.clear" ^ spc() ^ lreg_name(kd)
+
 // ******************* ace.reset *********************
 union clause instruction = ACERESET: (unit)
 
