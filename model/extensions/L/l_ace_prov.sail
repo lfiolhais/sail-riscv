@@ -17,8 +17,9 @@ function clause execute ACEPROV(imm, xs, kd) = {
   // Load metadata and set it in the loaded LRM
   foreach (i from 0 to (n_loads - 1)) {
       set_acestart(to_bits_unsafe(16, i * xlen_bytes));
+      let new_offset = offset + i * xlen_bytes;
 
-      match vmem_read(xs, offset, xlen_bytes, Load(Data), false, false, false) {
+      match vmem_read(xs, new_offset, xlen_bytes, Load(Data), false, false, false) {
         Ok(data) => Lm(kd) = l_set_data(lrm, data, i > 0),
         Err(e) => return e,
       }
