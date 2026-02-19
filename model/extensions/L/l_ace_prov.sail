@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 // =======================================================================================
 
-function clause execute ACEINIT(imm, xs, kd) = {
+function clause execute ACEPROV(imm, xs, kd) = {
   let offset : xlenbits = sign_extend(imm);
   // Metadata is 64 bits
   let n_loads = 8 / xlen_bytes;

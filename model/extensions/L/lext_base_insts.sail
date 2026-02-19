@@ -10,12 +10,13 @@
 // This file implements the base ACE extension `Zlace`
 // ******************************************************************************
 
-// ******************* ace.init *********************
-union clause instruction = ACEINIT: (bits(12), regidx, lregidx)
+// ******************* ace.prov *********************
+union clause instruction = ACEPROV: (bits(12), regidx, lregidx)
 
-mapping clause encdec = ACEINIT(imm, xs, kd)
-  <-> imm @ encdec_reg(xs) @ 0b100 @ encdec_lreg(kd) @ 0b0101011
+// TODO Implement indirect CR access
+mapping clause encdec = ACEPROV(imm, xs, kd)
+  <-> imm @ encdec_reg(xs) @ 0b100 @ encdec_lreg(kd) @ 0b0001011
   when (currentlyEnabled(Ext_L))
 
-mapping clause assembly = ACEINIT(imm, xs, kd)
-  <-> "ace.init" ^ spc() ^ lreg_name(kd) ^ sep()  ^ hex_bits_signed_12(imm) ^ "(" ^ reg_name(xs) ^ ")"
+mapping clause assembly = ACEPROV(imm, xs, kd)
+  <-> "ace.prov" ^ spc() ^ lreg_name(kd) ^ sep()  ^ hex_bits_signed_12(imm) ^ "(" ^ reg_name(xs) ^ ")"
