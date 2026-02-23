@@ -510,3 +510,14 @@ function has_metadata_error(kd: lregidx) -> bool = {
   return false;
 }
 
+
+function set_lr_slice(kd: lregidx, data: xlenbits, n_load: nat) -> unit = {
+  static_assert(llen % xlen == 0);
+
+  let index = n_load * xlen;
+
+  assert(index <= llen);
+  assert(index + xlen - 1 < llen);
+
+  L(kd) = [L(kd) with (index + xlen - 1) .. index = data];
+}

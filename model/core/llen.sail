@@ -14,3 +14,4 @@ let llen_exp = sizeof(llen_exp)
 type llen : Int = 2 ^ llen_exp
 
 let llen = sizeof(llen)
+let llen_bytes = sizeof(llen) / 8

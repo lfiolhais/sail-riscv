@@ -43,5 +43,27 @@ function clause execute ACEPROV(imm, xs, kd) = {
   set_aceerror(aceerrorType_bits(ACEE_NoError));
   Lm(kd) = [lrm with _provisioned = bitone, _allocated = bitone, _root_id = lregidx_bits(kd)];
 
+  let algorithm_size_bytes = algo_size / 8;
+
+  // SCC size is provided by algorithm, direction policy, and key type.
+  let n_lrs_to_be_loaded = algorithm_size_bytes / llen_bytes;
+  let n_loads = llen_bytes / xlen_bytes;
+
+  foreach (i from 0 to (n_lrs_to_be_loaded - 1)) {
+      // Load data and set it in the loaded LR
+      foreach (j from 0 to (n_loads - 1)) {
+          set_acestart(to_bits_unsafe(16, i * llen_bytes + j * xlen_bytes));
+          let new_offset = offset + i * llen_bytes + j * xlen_bytes;
+
+          match vmem_read(xs, new_offset, xlen_bytes, Load(Data), false, false, false) {
+            Ok(data) => set_lr_slice(kd, data, j),
+            Err(e) => return e,
+          }
+      };
+  };
+
+  set_acestart(zeros());
+  set_aceerror(aceerrorType_bits(ACEE_NoError));
+
   RETIRE_SUCCESS
 }
