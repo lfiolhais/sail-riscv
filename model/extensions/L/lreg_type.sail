@@ -10,7 +10,7 @@
 
 type llenbits = bits(llen)
 
-bitfield Lmetadata : bits(236) = {
+bitfield Lmetadata : bits(235) = {
     // Private Metadata (non-architectural)
     //
     // In order to support some kind of dynamic register allocation and
@@ -21,7 +21,6 @@ bitfield Lmetadata : bits(236) = {
     // destination/source register in a HAC instruction. Using a non-root
     // context in an instruction results in an `aceerror`. We can have up to
     // 32 siblings.
-    _provisioned: 235,
     _sibling_31 : 234 .. 230,
     _sibling_30 : 229 .. 225,
     _sibling_29 : 224 .. 220,
