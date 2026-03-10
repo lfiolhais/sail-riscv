@@ -70,3 +70,15 @@ mapping clause encdec = ACESIZE_F2(xs, xd)
 
 mapping clause assembly = ACESIZE_F2(xs, xd)
   <-> "ace.size.internal" ^ spc() ^ reg_name(xd) ^ sep()  ^ reg_name(xs)
+
+// ******************* ace.import *********************
+union clause instruction = ACEIMPORT: (bits(12), regidx, lregidx)
+
+// TODO Implement indirect CR access
+mapping clause encdec = ACEIMPORT(imm, xs, kd)
+  <-> imm @ encdec_reg(xs) @ 0b000 @ encdec_lreg(kd) @ 0b0001011
+  when (currentlyEnabled(Ext_L))
+
+mapping clause assembly = ACEIMPORT(imm, xs, kd)
+  <-> "ace.import" ^ spc() ^ lreg_name(kd) ^ sep()  ^ hex_bits_signed_12(imm) ^ "(" ^ reg_name(xs) ^ ")"
+

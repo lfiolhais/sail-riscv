@@ -286,6 +286,7 @@ extensions {
         extensions/L/l_ace_size_f0.sail,
         extensions/L/l_ace_size_f1.sail,
         extensions/L/l_ace_size_f2.sail,
+        extensions/L/l_ace_import.sail,
     }
   }
 
