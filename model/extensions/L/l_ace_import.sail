@@ -7,7 +7,7 @@
 // =======================================================================================
 
 function clause execute ACEIMPORT(imm, xs, kd) = {
-  let offset : xlenbits = sign_extend(imm);
+  var offset : xlenbits = sign_extend(imm);
   // Metadata is 64 bits
   let n_loads = 8 / xlen_bytes;
 
@@ -24,6 +24,7 @@ function clause execute ACEIMPORT(imm, xs, kd) = {
         Err(e) => return e,
       }
   };
+  offset = offset + 8;
 
   // Reset `acestart` because there is nothing to restart
   set_acestart(zeros());
@@ -44,6 +45,20 @@ function clause execute ACEIMPORT(imm, xs, kd) = {
   Lm(kd) = [lrm with _allocated = bitone, _root_id = lregidx_bits(kd)];
 
   let algorithm_size_bytes = algo_size / 8;
+
+  // Get SIV
+  let n_stores_siv = siv_len / xlen_bytes;
+  foreach (i from 0 to (n_stores_siv - 1)) {
+      set_acestart(to_bits_unsafe(16, i * xlen_bytes));
+
+      assert(xlen * i < siv_len - xlen);
+      assert(xlen * (i + 1) - 1 < siv_len);
+      match vmem_read(xs, offset, xlen_bytes, Load(Data), false, false, false) {
+        Ok(_) => (),
+        Err(e) => return e,
+      }
+  };
+  offset = offset + (siv_len / 8);
 
   // SCC size is provided by algorithm, direction policy, and key type.
   let n_lrs_to_be_loaded = algorithm_size_bytes / llen_bytes;
