@@ -44,6 +44,12 @@ void ModelImpl::set_reservation_set_size_exp(uint64_t exponent) {
   m_reservation_set_addr_mask = ~((1 << exponent) - 1);
 }
 
+void ModelImpl::print_current_exception() {
+  if (current_exception != nullptr) {
+    zprint_exception(*current_exception);
+  }
+}
+
 unit ModelImpl::fetch_callback(sbits opcode) {
   for (auto c : m_callbacks) {
     c->fetch_callback(*this, opcode);
@@ -141,6 +147,13 @@ unit ModelImpl::trap_callback(bool is_interrupt, fbits cause) {
   return UNIT;
 }
 
+unit ModelImpl::xret_callback(bool is_mret) {
+  for (auto c : m_callbacks) {
+    c->xret_callback(*this, is_mret);
+  }
+  return UNIT;
+}
+
 unit ModelImpl::ptw_start_callback(
   uint64_t vpn,
   hart::zMemoryAccessTypezIEmem_payloadz5zK access_type,
@@ -169,6 +182,34 @@ unit ModelImpl::ptw_success_callback(uint64_t final_ppn, int64_t level) {
 unit ModelImpl::ptw_fail_callback(hart::zPTW_Error error_type, int64_t level, sbits pte_addr) {
   for (auto c : m_callbacks) {
     c->ptw_fail_callback(*this, error_type, level, pte_addr);
+  }
+  return UNIT;
+}
+
+unit ModelImpl::tlb_add_callback(hart::zz5vecz8z5unionz0zzoptionzzIRTLB_EntryzzKz9 tlb, uint64_t index) {
+  for (auto c : m_callbacks) {
+    c->tlb_add_callback(*this, tlb, index);
+  }
+  return UNIT;
+}
+
+unit ModelImpl::tlb_flush_begin_callback(unit) {
+  for (auto c : m_callbacks) {
+    c->tlb_flush_begin_callback(*this);
+  }
+  return UNIT;
+}
+
+unit ModelImpl::tlb_flush_callback(uint64_t index) {
+  for (auto c : m_callbacks) {
+    c->tlb_flush_callback(*this, index);
+  }
+  return UNIT;
+}
+
+unit ModelImpl::tlb_flush_end_callback(hart::zz5vecz8z5unionz0zzoptionzzIRTLB_EntryzzKz9 tlb) {
+  for (auto c : m_callbacks) {
+    c->tlb_flush_end_callback(*this, tlb);
   }
   return UNIT;
 }

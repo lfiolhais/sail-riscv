@@ -31,6 +31,16 @@ enum AtomicSupport = {
   AMOCASQ,
 }
 
+function pma_atomicity_support_gt(x : AtomicSupport, y : AtomicSupport) -> bool = num_of_AtomicSupport(x) > num_of_AtomicSupport(y)
+function pma_atomicity_support_lt(x : AtomicSupport, y : AtomicSupport) -> bool = num_of_AtomicSupport(x) < num_of_AtomicSupport(y)
+function pma_atomicity_support_ge(x : AtomicSupport, y : AtomicSupport) -> bool = num_of_AtomicSupport(x) >= num_of_AtomicSupport(y)
+function pma_atomicity_support_le(x : AtomicSupport, y : AtomicSupport) -> bool = num_of_AtomicSupport(x) <= num_of_AtomicSupport(y)
+
+overload operator > = {pma_atomicity_support_gt}
+overload operator < = {pma_atomicity_support_lt}
+overload operator >= = {pma_atomicity_support_ge}
+overload operator <= = {pma_atomicity_support_le}
+
 mapping atomic_support_str : AtomicSupport <-> string = {
   AMONone       <-> "AMONone",
   AMOSwap       <-> "AMOSwap",
@@ -41,6 +51,17 @@ mapping atomic_support_str : AtomicSupport <-> string = {
   AMOCASQ       <-> "AMOCASQ",
 }
 overload to_str = {atomic_support_str}
+
+function pma_allows_atomic_op forall 'n, 0 < 'n <= max_mem_access . (pma : AtomicSupport, op : amoop, width : int('n)) -> bool =
+  match pma {
+    AMONone       => false,
+    AMOSwap       => op == AMOSWAP,
+    AMOLogical    => op == AMOSWAP | op == AMOAND | op == AMOOR | op == AMOXOR,
+    AMOArithmetic => op != AMOCAS,
+    AMOCASW       => op != AMOCAS | width <= 4,
+    AMOCASD       => op != AMOCAS | width <= 8,
+    AMOCASQ       => op != AMOCAS | width <= 16,
+  }
 
 enum Reservability = { RsrvNone, RsrvNonEventual, RsrvEventual }
 
@@ -63,8 +84,11 @@ mapping misaligned_fault_str : misaligned_fault <-> string = {
 }
 overload to_str = {misaligned_fault_str}
 
+enum MemoryRegionType = { MainMemory, IOMemory }
+
 // Physical Memory Attributes for a region.
 struct PMA = {
+  mem_type         : MemoryRegionType,
   // These have no effect on the model currently but they are affected
   // by PBMT so they need to be here if the resulting PMA is verified.
   cacheable        : bool,
@@ -80,16 +104,35 @@ struct PMA = {
   write_idempotent : bool,
   // Optionally cause an access/alignment fault on misaligned access.
   misaligned_fault : misaligned_fault,
-  // TODO: Atomicity PMA. This is not supported yet because
-  // the MemoryAccessType needs to be extended to indicate the AMO type.
-  // atomic_support   : AtomicSupport,
+  atomic_support   : AtomicSupport,
   reservability    : Reservability,
   // Flags whether this memory supports CBO.zero. Note that main memory regions must
   // have this set.
   supports_cbo_zero : bool,
+  // Flags whether this memory supports hardware page table reads.
+  supports_pte_read : bool,
+  // Flags whether this memory supports hardware page table writes.
+  supports_pte_write : bool,
   // TODO: Misaligned Atomicity Granule PMA
   // TODO: Memory Ordering PMA
 }
+
+// A PMA can be overridden by page-based memory types.
+// TODO: specify alignment for IO regions.
+function override_PMA(pma : PMA, pbmt : page_based_mem_type) -> PMA =
+  match pbmt {
+    PBMT_PMA => pma,
+    // TODO: return a weakly-ordered PMA
+    PBMT_NC  => {pma with mem_type = MainMemory,
+                          cacheable = false,
+                          read_idempotent = true,
+                          write_idempotent = true},
+    // TODO: return a strongly ordered PMA
+    PBMT_IO  => {pma with mem_type = IOMemory,
+                          cacheable = false,
+                          read_idempotent = false,
+                          write_idempotent = false},
+  }
 
 // A region of memory and its Physical Memory Attributes.
 struct PMA_Region = {
@@ -105,24 +148,25 @@ struct PMA_Region = {
 }
 
 // Get the first PMA region that fully contains a given [base, base+size) range.
-function matching_pma_bits_range(pmas : list(PMA_Region), base : bits(64), size : bits(64)) -> option(PMA_Region) = {
-  match pmas {
+function matching_pma_region_bits_range(regions : list(PMA_Region), base : bits(64), size : bits(64)) -> option(PMA_Region) = {
+  match regions {
     [||] => None(),
-    pma :: rest => {
-      if range_subset(base, size, pma.base, pma.size)
-      then Some(pma)
-      else matching_pma_bits_range(rest, base, size)
+    region :: rest => {
+      if range_subset(base, size, region.base, region.size)
+      then Some(region)
+      else matching_pma_region_bits_range(rest, base, size)
     }
   }
 }
 
-// Get the first PMA that matches a given address range.
-// Delegate to matching_pma_bits_range to avoid duplicating the range logic.
-function matching_pma(pmas : list(PMA_Region), addr : physaddr, width : mem_access_width) -> option(PMA_Region) = {
-  matching_pma_bits_range(pmas, zero_extend(bits_of(addr)), to_bits(width))
+// Get the first PMA region that matches a given address range.
+// Delegate to matching_pma_region_bits_range to avoid duplicating the range logic.
+function matching_pma_region(regions : list(PMA_Region), addr : physaddr, width : mem_access_width) -> option(PMA_Region) = {
+  matching_pma_region_bits_range(regions, zero_extend(bits_of(addr)), to_bits(width))
 }
 
 function pma_attributes_to_str(attr : PMA) -> string =
+  (match attr.mem_type { MainMemory => " main-memory", IOMemory => " io-memory", }) ^
   (if attr.cacheable then " cacheable" else "") ^
   (if attr.coherent then " coherent" else "") ^
   (if attr.executable then " executable" else "") ^
@@ -131,10 +175,12 @@ function pma_attributes_to_str(attr : PMA) -> string =
   (if attr.read_idempotent then " read-idempotent" else "") ^
   (if attr.write_idempotent then " write-idempotent" else "") ^
   " misaligned_fault:" ^ to_str(attr.misaligned_fault) ^
-  // TODO: Atomicity PMA.
-  // " " ^ to_str(attr.atomic_support) ^
+  " " ^ to_str(attr.atomic_support) ^
   " " ^ to_str(attr.reservability) ^
-  (if attr.supports_cbo_zero then " supports_cbo_zero" else "")
+  (if attr.supports_cbo_zero then " supports-cbo-zero" else "") ^
+  (if attr.supports_pte_read then " supports-pte-read" else "") ^
+  (if attr.supports_pte_write then " supports-pte-write" else "") ^
+  " "
 
 function pma_region_to_str(region : PMA_Region) -> string =
   "base: " ^ bits_str(region.base) ^ " size: " ^ bits_str(region.size)
