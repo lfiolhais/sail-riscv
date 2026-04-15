@@ -82,3 +82,14 @@ mapping clause encdec = ACEIMPORT(imm, xs, kd)
 mapping clause assembly = ACEIMPORT(imm, xs, kd)
   <-> "ace.import" ^ spc() ^ lreg_name(kd) ^ sep()  ^ hex_bits_signed_12(imm) ^ "(" ^ reg_name(xs) ^ ")"
 
+// ******************* ace.export *********************
+union clause instruction = ACEEXPORT: (bits(12), regidx, lregidx)
+
+// TODO Implement indirect CR access
+mapping clause encdec = ACEEXPORT(imm, xd, ks)
+  <-> imm[11..5] @ encdec_lreg(ks) @ encdec_reg(xd) @ 0b000 @ imm[4..0] @ 0b0100111
+  when (currentlyEnabled(Ext_L))
+
+mapping clause assembly = ACEEXPORT(imm, xd, ks)
+  <-> "ace.export" ^ spc() ^ lreg_name(ks) ^ sep()  ^ hex_bits_signed_12(imm) ^ "(" ^ reg_name(xd) ^ ")"
+
