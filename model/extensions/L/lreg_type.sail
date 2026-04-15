@@ -118,7 +118,6 @@ mapping acekeyType_bits : AceKeyType <-> bits(1) = {
 }
 
 enum AceAlgorithmType = {
-    ACEA_Invalid,
     ACEA_AES128,
     ACEA_AES192,
     ACEA_AES256,
@@ -126,62 +125,86 @@ enum AceAlgorithmType = {
     ACEA_SHA2,
     ACEA_SHA3,
     ACEA_SM3,
-    ACEA_HMAC,
     ACEA_ASCON
 }
 
 mapping acealgorithmType_bits : AceAlgorithmType <-> bits(4) = {
-  ACEA_Invalid <-> 0b0000, // 0
-  ACEA_AES128  <-> 0b0001, // 1
-  ACEA_AES192  <-> 0b0010, // 2
-  ACEA_AES256  <-> 0b0011, // 3
-  ACEA_SM4     <-> 0b0100, // 4
-  ACEA_SHA2    <-> 0b0101, // 5
-  ACEA_SHA3    <-> 0b0110, // 6
-  ACEA_SM3     <-> 0b0111, // 7
-  ACEA_HMAC    <-> 0b1000, // 8
-  ACEA_ASCON   <-> 0b1001, // 9
+  ACEA_AES128  <-> 0b0000, // 0
+  ACEA_AES192  <-> 0b0001, // 1
+  ACEA_AES256  <-> 0b0010, // 2
+  ACEA_SM4     <-> 0b0011, // 3
+  ACEA_SHA2    <-> 0b0100, // 4
+  ACEA_SHA3    <-> 0b0101, // 5
+  ACEA_SM3     <-> 0b0110, // 6
+  ACEA_ASCON   <-> 0b0111, // 7
 }
 
-enum AceAlgorithmModeType = {
-    // Ciphers
-    ACEAM_C_Ctr,
-    ACEAM_C_Xctr,
-    ACEAM_C_GCM,
-    ACEAM_C_GCM_SIV,
+enum AceAlgorithmCipherModeType = {
+    ACEAM_C_ECB,
+    ACEAM_C_CTR,
+    ACEAM_C_LFSR,
+    ACEAM_C_XCTR,
+    ACEAM_C_XLFSR,
     ACEAM_C_XEX,
-    ACEAM_C_XTS,
-    ACEAM_C_OCB,
+    ACEAM_C_GCM,
+    ACEAM_C_GCM_IV,
+    ACEAM_C_GCM_SIV,
     ACEAM_C_CMAC,
-    // Hashes
+    ACEAM_C_OCB,
+    ACEAM_C_OCB_IV,
+}
+
+mapping acealgorithmCipherModeType_bits : AceAlgorithmCipherModeType <-> bits(5) = {
+    ACEAM_C_ECB     <-> 0b00000,
+    ACEAM_C_CTR     <-> 0b00001,
+    ACEAM_C_LFSR    <-> 0b00010,
+    ACEAM_C_XCTR    <-> 0b00011,
+    ACEAM_C_XLFSR   <-> 0b00100,
+    ACEAM_C_XEX     <-> 0b00101,
+    ACEAM_C_GCM     <-> 0b00110,
+    ACEAM_C_GCM_IV  <-> 0b00111,
+    ACEAM_C_GCM_SIV <-> 0b01000,
+    ACEAM_C_CMAC    <-> 0b01001,
+    ACEAM_C_OCB     <-> 0b01010,
+    ACEAM_C_OCB_IV  <-> 0b01011,
+}
+
+enum AceAlgorithmHashModeType = {
     ACEAM_H_224,
     ACEAM_H_256,
     ACEAM_H_384,
     ACEAM_H_512,
+    ACEAM_H_512_224,
+    ACEAM_H_512_256,
+    ACEAM_H_224_HMAC,
+    ACEAM_H_256_HMAC,
+    ACEAM_H_384_HMAC,
+    ACEAM_H_512_HMAC,
+    ACEAM_H_512_224_HMAC,
+    ACEAM_H_512_256_HMAC,
+    ACEAM_H_KMAC128,
+    ACEAM_H_KMAC256,
     ACEAM_H_SHAKE128,
     ACEAM_H_SHAKE256,
-    //
-    ACEAM_HC_None
 }
 
-mapping acealgorithmModeType_bits : AceAlgorithmModeType <-> bits(4) = {
-    // Ciphers
-    ACEAM_C_Ctr       <-> 0b0000,
-    ACEAM_C_Xctr      <-> 0b0001,
-    ACEAM_C_GCM       <-> 0b0010,
-    ACEAM_C_GCM_SIV   <-> 0b0011,
-    ACEAM_C_XEX       <-> 0b0100,
-    ACEAM_C_XTS       <-> 0b0101,
-    ACEAM_C_OCB       <-> 0b0110,
-    ACEAM_C_CMAC      <-> 0b0111,
-    // Hashes
-    ACEAM_H_224       <-> 0b1000,
-    ACEAM_H_256       <-> 0b1001,
-    ACEAM_H_384       <-> 0b1010,
-    ACEAM_H_512       <-> 0b1011,
-    ACEAM_H_SHAKE128  <-> 0b1100,
-    ACEAM_H_SHAKE256  <-> 0b1101,
-    ACEAM_HC_None     <-> 0b1111
+mapping acealgorithmHashModeType_bits : AceAlgorithmHashModeType <-> bits(5) = {
+    ACEAM_H_224          <-> 0b00000,
+    ACEAM_H_256          <-> 0b00001,
+    ACEAM_H_384          <-> 0b00010,
+    ACEAM_H_512          <-> 0b00011,
+    ACEAM_H_512_224      <-> 0b00100,
+    ACEAM_H_512_256      <-> 0b00101,
+    ACEAM_H_224_HMAC     <-> 0b00110,
+    ACEAM_H_256_HMAC     <-> 0b00111,
+    ACEAM_H_384_HMAC     <-> 0b01000,
+    ACEAM_H_512_HMAC     <-> 0b01001,
+    ACEAM_H_512_224_HMAC <-> 0b01010,
+    ACEAM_H_512_256_HMAC <-> 0b01011,
+    ACEAM_H_KMAC128      <-> 0b01100,
+    ACEAM_H_KMAC256      <-> 0b01101,
+    ACEAM_H_SHAKE128     <-> 0b01110,
+    ACEAM_H_SHAKE256     <-> 0b01111,
 }
 
 enum AceSCProtectionType = {
