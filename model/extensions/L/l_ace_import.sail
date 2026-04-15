@@ -51,7 +51,7 @@ function clause execute ACEIMPORT(imm, xs, kd) = {
   foreach (i from 0 to (n_stores_siv - 1)) {
       set_acestart(to_bits_unsafe(16, i * xlen_bytes));
 
-      assert(xlen * i < siv_len - xlen);
+      assert(xlen * i <= siv_len - xlen);
       assert(xlen * (i + 1) - 1 < siv_len);
       match vmem_read(xs, offset, xlen_bytes, Load(Data), false, false, false) {
         Ok(_) => (),
