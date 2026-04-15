@@ -112,16 +112,16 @@ void log_callbacks::vreg_write_callback(hart::Model &, unsigned reg, lbits value
 }
 
 void log_callbacks::lreg_write_callback(hart::Model &, unsigned reg, lbits value) {
-  if (trace_log != nullptr && config_print_reg) {
+  if (trace_log != nullptr && config_print_gpr) {
     fprintf(trace_log, "l%d <- 0x", reg);
-    print_lbits_hex(trace_log, value);
+    gmp_fprintf(trace_log, "0x%0*ZX\n", value.len / 4, *value.bits);
   }
 }
 
 void log_callbacks::lmreg_write_callback(hart::Model &, unsigned reg, lbits value) {
-  if (trace_log != nullptr && config_print_reg) {
+  if (trace_log != nullptr && config_print_gpr) {
     fprintf(trace_log, "(Internal) lm%d <- 0x", reg);
-    print_lbits_hex(trace_log, value);
+    gmp_fprintf(trace_log, "0x%0*ZX\n", value.len / 4, *value.bits);
   }
 }
 
