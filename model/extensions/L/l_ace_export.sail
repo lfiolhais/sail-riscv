@@ -41,8 +41,8 @@ function clause execute ACEEXPORT(imm, xd, ks) = {
   foreach (i from 0 to (n_stores_siv - 1)) {
       set_acestart(to_bits_unsafe(16, i * xlen_bytes));
 
-      assert(xlen * i < 128 - xlen);
-      assert(xlen * (i + 1) - 1 < 128);
+      assert(xlen * i < siv_len - xlen);
+      assert(xlen * (i + 1) - 1 < siv_len);
       let data_to_store = siv[xlen * (i + 1) - 1 .. xlen * i];
       match vmem_write(xd, offset, xlen_bytes, data_to_store, Store(Data), false, false, false) {
         Ok(true)  => (),

@@ -515,8 +515,8 @@ function set_lr_slice(kd: lregidx, data: xlenbits, n_load: nat) -> unit = {
 
   let index = n_load * xlen;
 
-  assert(index <= llen);
-  assert(index + xlen - 1 < llen);
+  assert(index < llen);
+  assert(index + xlen - 1 < llen - xlen);
 
   L(kd) = [L(kd) with (index + xlen - 1) .. index = data];
 }
