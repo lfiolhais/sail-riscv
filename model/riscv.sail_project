@@ -278,7 +278,7 @@ extensions {
     }
 
     L_instructions {
-      requires sys, I, L_core
+      requires sys, I, L_core, V_core, V_instructions, Zvk_core
       files
         extensions/L/lext_base_insts.sail,
         extensions/L/l_ace_prov.sail,
@@ -289,6 +289,10 @@ extensions {
         extensions/L/l_ace_size_f2.sail,
         extensions/L/l_ace_import.sail,
         extensions/L/l_ace_export.sail,
+        extensions/L/l_ace_exec_fa.sail,
+        extensions/L/l_ace_exec_fb.sail,
+        extensions/L/l_ace_exec_fc.sail,
+        extensions/L/l_ace_exec_fd.sail,
     }
   }
 

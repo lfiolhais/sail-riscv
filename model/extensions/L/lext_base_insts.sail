@@ -93,3 +93,43 @@ mapping clause encdec = ACEEXPORT(imm, xd, ks)
 mapping clause assembly = ACEEXPORT(imm, xd, ks)
   <-> "ace.export" ^ spc() ^ lreg_name(ks) ^ sep()  ^ hex_bits_signed_12(imm) ^ "(" ^ reg_name(xd) ^ ")"
 
+// ******************* ace.exec *********************
+union clause instruction = ACEEXEC_FA: (vregidx, lregidx, vregidx)
+
+// TODO Implement indirect CR access
+mapping clause encdec = ACEEXEC_FA(vd, kn, vs)
+  <-> 0b00 @ 0b00 @ 0b0 @ 0b0 @ 0b0 @ encdec_vreg(vs) @ encdec_lreg(kn) @ 0b000 @ encdec_vreg(vd) @ 0b1011011
+  when currentlyEnabled(Ext_L) & get_sew() == 32 & not(zvk_valid_reg_overlap(vs, vd, get_lmul_pow()))
+
+mapping clause assembly = ACEEXEC_FA(vd, kn, vs)
+  <-> "ace.exec.a" ^ spc() ^ vreg_name(vd) ^ sep()  ^ lreg_name(kn) ^ sep() ^ vreg_name(vs)
+
+union clause instruction = ACEEXEC_FB: (lregidx, vregidx)
+
+// TODO Implement indirect CR access
+mapping clause encdec = ACEEXEC_FB(kn, vs)
+  <-> 0b00 @ 0b01 @ 0b0 @ 0b0 @ 0b0 @ encdec_vreg(vs) @ encdec_lreg(kn) @ 0b000 @ 0b00000 @ 0b1011011
+  when currentlyEnabled(Ext_L) & get_sew() == 32
+
+mapping clause assembly = ACEEXEC_FB(kn, vs)
+  <-> "ace.exec.b" ^ spc() ^ lreg_name(kn) ^ sep() ^ vreg_name(vs)
+
+union clause instruction = ACEEXEC_FC: (vregidx, lregidx)
+
+// TODO Implement indirect CR access
+mapping clause encdec = ACEEXEC_FC(vd, kn)
+  <-> 0b00 @ 0b10 @ 0b0 @ 0b0 @ 0b0 @ 0b00000 @ encdec_lreg(kn) @ 0b000 @ encdec_vreg(vd) @ 0b1011011
+  when currentlyEnabled(Ext_L) & get_sew() == 32
+
+mapping clause assembly = ACEEXEC_FC(vd, kn)
+  <-> "ace.exec.c" ^ spc() ^ vreg_name(vd) ^ sep() ^ lreg_name(kn)
+
+union clause instruction = ACEEXEC_FD: (lregidx)
+
+// TODO Implement indirect CR access
+mapping clause encdec = ACEEXEC_FD(kn)
+  <-> 0b00 @ 0b11 @ 0b0 @ 0b0 @ 0b0 @ 0b00000 @ encdec_lreg(kn) @ 0b000 @ 0b00000 @ 0b1011011
+  when (currentlyEnabled(Ext_L))
+
+mapping clause assembly = ACEEXEC_FD(kn)
+  <-> "ace.exec.d" ^ spc() ^ lreg_name(kn)
