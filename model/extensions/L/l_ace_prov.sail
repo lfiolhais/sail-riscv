@@ -7,7 +7,7 @@
 // =======================================================================================
 
 function clause execute ACEPROV(imm, xs, kd) = {
-  let offset : xlenbits = sign_extend(imm);
+  var offset : xlenbits = sign_extend(imm);
   // Metadata is 64 bits
   let n_loads = 8 / xlen_bytes;
 
@@ -24,6 +24,7 @@ function clause execute ACEPROV(imm, xs, kd) = {
         Err(e) => return e,
       }
   };
+  offset = offset + 8;
 
   // Reset `acestart` because there is nothing to restart
   set_acestart(zeros());
