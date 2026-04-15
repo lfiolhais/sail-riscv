@@ -59,14 +59,14 @@ bitfield Lmetadata : bits(235) = {
 
     // Public Metadata (Architectural)
     ExpirationDate : 63 .. 46,
-    ExtraContent   : 45 .. 32,
+    AdditionalData : 45 .. 32,
 
-    UC_Policy      : 31 .. 29,
+    Usage_Policy   : 31 .. 29,
     Locality       : 28 .. 21,
     State_Number   : 20 .. 17,
     KeyType        : 16 .. 16,
     SC_Protection  : 15 .. 14,
-    DirectionPolicy: 13 .. 12,
+    AlgorithmPolicy: 13 .. 12,
     Algorithm      : 11 .. 1,
     Format         : 0
 }

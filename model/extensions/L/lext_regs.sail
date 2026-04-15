@@ -390,19 +390,19 @@ function l_set_data(lrm: Lmetadata, data: xlenbits, upper: bool) -> Lmetadata = 
 
     if xlen == 64 then {
         out[ExpirationDate] = data[63 .. 46];
-        out[ExtraContent]   = data[45 .. 32];
+        out[AdditionalData] = data[45 .. 32];
     } else if xlen == 32 & upper then {
         out[ExpirationDate] = data[31 .. 14];
-        out[ExtraContent]   = data[13 ..  0];
+        out[AdditionalData] = data[13 ..  0];
     };
 
     if xlen== 64 | (xlen== 32 & not(upper)) then {
-        out[UC_Policy]        = data[31 .. 29];
+        out[Usage_Policy]     = data[31 .. 29];
         out[Locality]         = data[28 .. 21];
         out[State_Number]     = data[20 .. 17];
         out[KeyType]          = data[16 .. 16];
         out[SC_Protection]    = data[15 .. 14];
-        out[DirectionPolicy]  = data[13 .. 12];
+        out[AlgorithmPolicy]  = data[13 .. 12];
         out[Algorithm]        = data[11 .. 1];
         out[Format]           = data[0];
     };
@@ -488,7 +488,7 @@ function has_metadata_error(kd: lregidx) -> bool = {
   // TODO Implement Locality checks
 
   // Check metadata validity: "Usage Control Policies" field:
-  let uc_policy = lrm[UC_Policy];
+  let uc_policy = lrm[Usage_Policy];
   let error : bool = match cur_privilege {
      User              => not(bit_to_bool(uc_policy[0])),
      Supervisor        => not(currentlyEnabled(Ext_S)) | not(bit_to_bool(uc_policy[1])),
@@ -502,7 +502,7 @@ function has_metadata_error(kd: lregidx) -> bool = {
      return true;
   };
 
-  // TODO Implement ExtraContent checks
+  // TODO Implement AdditionalData checks
 
   // TODO Implement ExpirationDate checks
 
