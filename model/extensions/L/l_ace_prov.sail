@@ -53,7 +53,7 @@ function clause execute ACEPROV(imm, xs, kd) = {
   foreach (i from 0 to (n_lrs_to_be_loaded - 1)) {
       // Load data and set it in the loaded LR
       foreach (j from 0 to (n_loads - 1)) {
-          set_acestart(to_bits_unsafe(16, i * llen_bytes + j * xlen_bytes));
+          set_acestart(to_bits_unsafe(16, i * llen_bytes + j * xlen_bytes + unsigned(offset)));
           let new_offset = offset + i * llen_bytes + j * xlen_bytes;
 
           match vmem_read(xs, new_offset, xlen_bytes, Load(Data), false, false, false) {

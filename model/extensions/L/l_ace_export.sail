@@ -39,7 +39,7 @@ function clause execute ACEEXPORT(imm, xd, ks) = {
   // TODO: Get proper SIV
   let siv: bits(siv) = 0xdeadbeefabad1deadeadbeefabad1dea;
   foreach (i from 0 to (n_stores_siv - 1)) {
-      set_acestart(to_bits_unsafe(16, i * xlen_bytes));
+      set_acestart(to_bits_unsafe(16, i * xlen_bytes + unsigned(offset)));
 
       assert(xlen * i <= siv_len - xlen);
       assert(xlen * (i + 1) - 1 < siv_len);
@@ -65,7 +65,7 @@ function clause execute ACEEXPORT(imm, xd, ks) = {
       let k = L(l_id);
 
       foreach (j from 0 to (n_stores - 1)) {
-          set_acestart(to_bits_unsafe(16, i * llen_bytes + j * xlen_bytes));
+          set_acestart(to_bits_unsafe(16, i * llen_bytes + j * xlen_bytes + unsigned(offset)));
           let new_offset = offset + i * llen_bytes + j * xlen_bytes;
 
           assert(j * xlen < llen - xlen);
