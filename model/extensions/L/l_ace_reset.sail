@@ -8,7 +8,7 @@
 
 function clause execute ACERESET() = {
   foreach (i from 0 to 31) {
-      let _ = lrm_dealloc(lregno_to_lregidx(Lregno(i)));
+      lrm_dealloc(lregno_to_lregidx(Lregno(i)));
   };
 
   set_aceerror(aceerrorType_bits(ACEE_NoError));

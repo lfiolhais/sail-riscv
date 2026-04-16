@@ -7,7 +7,7 @@
 // =======================================================================================
 
 function clause execute ACECLEAR(kd) = {
-  let _ = lrm_dealloc(kd);
+  lrm_dealloc(kd);
 
   set_aceerror(aceerrorType_bits(ACEE_NoError));
 
