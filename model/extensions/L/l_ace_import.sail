@@ -47,7 +47,7 @@ function clause execute ACEIMPORT(imm, xs, kd) = {
   let algorithm_size_bytes = algo_size / 8;
 
   // Get SIV
-  let n_stores_siv = siv_len / xlen_bytes;
+  let n_stores_siv = (siv_len / 8) / xlen_bytes;
   foreach (i from 0 to (n_stores_siv - 1)) {
       set_acestart(to_bits_unsafe(16, i * xlen_bytes + unsigned(offset)));
 
