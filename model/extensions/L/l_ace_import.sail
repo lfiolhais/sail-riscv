@@ -53,7 +53,8 @@ function clause execute ACEIMPORT(imm, xs, kd) = {
 
       assert(xlen * i <= siv_len - xlen);
       assert(xlen * (i + 1) - 1 < siv_len);
-      match vmem_read(xs, offset, xlen_bytes, Load(Data), false, false, false) {
+      let new_offset = offset + i * xlen_bytes;
+      match vmem_read(xs, new_offset, xlen_bytes, Load(Data), false, false, false) {
         Ok(_) => (),
         Err(e) => return e,
       }
