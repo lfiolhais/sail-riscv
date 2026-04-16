@@ -73,28 +73,32 @@ bitfield Lmetadata : bits(235) = {
 
 enum AceErrorType = {
     ACEE_NoError,
-    ACEE_ImportAuthentication,
-    ACEE_Unconfigured,
     ACEE_InvalidCR,
+    ACEE_Unconfigured,
     ACEE_ExpiredCR,
+    ACEE_ImportAuthentication,
+    ACEE_Privilege,
+    ACEE_InvalidValue,
     ACEE_Memory,
     ACEE_Unimplemented,
-    ACEE_InvalidValue,
-    ACEE_Privilege,
-    ACEE_Authentication
+    ACEE_Unconf_Buf,
+    ACEE_Authentication,
+    ACEE_Infty,
 }
 
 mapping aceerrorType_bits : AceErrorType <-> bits(8) = {
   ACEE_NoError              <-> 0b00000000, // 0
-  ACEE_ImportAuthentication <-> 0b00000001, // 1
+  ACEE_InvalidCR            <-> 0b00000001, // 1
   ACEE_Unconfigured         <-> 0b00000010, // 2
-  ACEE_InvalidCR            <-> 0b00000011, // 3
-  ACEE_ExpiredCR            <-> 0b00000100, // 4
-  ACEE_Memory               <-> 0b00000101, // 5
-  ACEE_Unimplemented        <-> 0b00000110, // 6
-  ACEE_InvalidValue         <-> 0b00000111, // 7
-  ACEE_Privilege            <-> 0b00001000, // 8
-  ACEE_Authentication       <-> 0b00001001, // 9
+  ACEE_ExpiredCR            <-> 0b00000011, // 3
+  ACEE_ImportAuthentication <-> 0b00000100, // 4
+  ACEE_Privilege            <-> 0b00000101, // 5
+  ACEE_InvalidValue         <-> 0b00000110, // 6
+  ACEE_Memory               <-> 0b00000111, // 7
+  ACEE_Unimplemented        <-> 0b00001000, // 8
+  ACEE_Unconf_Buf           <-> 0b00001001, // 9
+  ACEE_Authentication       <-> 0b00001010, // 10
+  ACEE_Infty                <-> 0b11111111, // 255
 }
 
 enum AceMetadataFormatType = {
