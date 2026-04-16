@@ -44,7 +44,8 @@ function clause execute ACEEXPORT(imm, xd, ks) = {
       assert(xlen * i <= siv_len - xlen);
       assert(xlen * (i + 1) - 1 < siv_len);
       let data_to_store = siv[xlen * (i + 1) - 1 .. xlen * i];
-      match vmem_write(xd, offset, xlen_bytes, data_to_store, Store(Data), false, false, false) {
+      let new_offset = offset + i * xlen_bytes;
+      match vmem_write(xd, new_offset, xlen_bytes, data_to_store, Store(Data), false, false, false) {
         Ok(true)  => (),
         Ok(false) => internal_error(__FILE__, __LINE__, "store got false from vmem_write"),
         Err(e)    => return e,
