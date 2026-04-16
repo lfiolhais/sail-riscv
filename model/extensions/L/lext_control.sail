@@ -20,6 +20,10 @@ function is_algorithm_supported(algo: bits(11)) -> bool = {
             ACEAM_C_ECB => return true,
             _           => return false,
         },
+        ACEA_AES192 => match algo_cipher_mode {
+            ACEAM_C_ECB => return true,
+            _           => return false,
+        },
         _           => return false,
     };
 }
@@ -33,6 +37,10 @@ function algorithm_size(algo: bits(11)) -> nat = {
     match algo_type {
         ACEA_AES128 => match algo_cipher_mode {
             ACEAM_C_ECB => return 128,
+            _           => return 0,
+        },
+        ACEA_AES192 => match algo_cipher_mode {
+            ACEAM_C_ECB => return 192,
             _           => return 0,
         },
         _           => return 0,
