@@ -35,7 +35,7 @@ function clause execute ACEEXPORT(imm, xd, ks) = {
   offset = offset + 8;
 
   // SIV is 128 bits
-  let n_stores_siv = siv_len / xlen_bytes;
+  let n_stores_siv = (siv_len / 8) / xlen_bytes;
   // TODO: Get proper SIV
   let siv: bits(siv) = 0xdeadbeefabad1deadeadbeefabad1dea;
   foreach (i from 0 to (n_stores_siv - 1)) {
