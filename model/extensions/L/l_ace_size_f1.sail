@@ -14,7 +14,7 @@ function clause execute ACESIZE_F1(xs, xd) = {
     X(xd) = zeros();
   } else {
     let algo_size_bits = algorithm_size(algo);
-    X(xd) = to_bits_truncate(algo_size_bits / 8);
+    X(xd) = to_bits_truncate(algo_size_bits / 8) + 8 + 16;
   };
 
   RETIRE_SUCCESS
