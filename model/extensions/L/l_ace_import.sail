@@ -12,7 +12,7 @@ function clause execute ACEIMPORT(imm, xs, kd) = {
   let n_loads = 8 / xlen_bytes;
 
   // Deallocate Metadata Register and perform necessary cleanup/initialization
-  let lrm = lrm_dealloc(kd);
+  lrm_dealloc(kd);
 
   // Load metadata and set it in the loaded LRM
   foreach (i from 0 to (n_loads - 1)) {

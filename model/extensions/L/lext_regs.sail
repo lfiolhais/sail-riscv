@@ -365,7 +365,7 @@ function l_dealloc_siblings(r : lregno) -> unit = {
 
 function l_dealloc_siblings_bits(i: lregidx) -> unit = l_dealloc_siblings(lregidx_to_lregno(i))
 
-function lrm_dealloc(kd: lregidx) -> Lmetadata = {
+function lrm_dealloc(kd: lregidx) -> unit = {
   // Zero internal `_allocated` flag
   Lm(kd) = [Lm(kd) with _allocated = bitzero];
   // Read the metadata register but now the register is no longer allocated
@@ -381,8 +381,6 @@ function lrm_dealloc(kd: lregidx) -> Lmetadata = {
   assert(unsigned(lrm[_n_siblings]) == 0);
 
   dirty_l_context();
-
-  lrm
 }
 
 function l_set_data(lrm: Lmetadata, data: xlenbits, upper: bool) -> Lmetadata = {
