@@ -20,7 +20,7 @@ function clause execute ACEPROV(imm, xs, kd) = {
       let new_offset = offset + i * xlen_bytes;
 
       match vmem_read(xs, new_offset, xlen_bytes, Load(Data), false, false, false) {
-        Ok(data) => Lm(kd) = l_set_data(lrm, data, i > 0),
+        Ok(data) => Lm(kd) = l_set_data(Lm(kd), data, i > 0),
         Err(e) => return e,
       }
   };
@@ -34,7 +34,9 @@ function clause execute ACEPROV(imm, xs, kd) = {
   };
 
   // Check if register file has enough memory
-  let algo_size = algorithm_size(lrm[Algorithm]);
+  let algo_size = algorithm_size(Lm(kd)[Algorithm]);
+  assert(algo_size > 0);
+  print_int("Algo Size = ", algo_size);
   if algo_size > llen then {
     // TODO Implement dynamic register allocation
     set_aceerror(aceerrorType_bits(ACEE_Memory));
@@ -42,7 +44,7 @@ function clause execute ACEPROV(imm, xs, kd) = {
   };
 
   set_aceerror(aceerrorType_bits(ACEE_NoError));
-  Lm(kd) = [lrm with _allocated = bitone, _root_id = lregidx_bits(kd)];
+  Lm(kd) = [Lm(kd) with _allocated = bitone, _root_id = lregidx_bits(kd)];
 
   let algorithm_size_bytes = algo_size / 8;
 
