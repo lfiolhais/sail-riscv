@@ -441,14 +441,13 @@ function clause write_CSR(0x801, value) = { set_acestart(value[15 .. 0]); Ok(ace
 
 // Validates the metadata in register with index `kd` and sets `ace_error` accordingly.
 // Returns true if there is an error.
-function has_metadata_error(kd: lregidx) -> bool = {
-  // Read register again so that we are inspecting the new metadata
-  let lrm = Lm(kd);
-
+function has_metadata_error(lrm: Lmetadata, write_aceerror: bool) -> bool = {
   // Check metadata validity: Check format
   let format = acemetadataformatType_bits(lrm[Format]);
   if format != ACEM_Std then {
-     set_aceerror(aceerrorType_bits(ACEE_InvalidValue));
+     if write_aceerror then {
+         set_aceerror(aceerrorType_bits(ACEE_InvalidValue));
+     };
      return true;
   };
 
@@ -456,7 +455,9 @@ function has_metadata_error(kd: lregidx) -> bool = {
   let key_type = acekeyType_bits(lrm[KeyType]);
   if key_type != ACEK_Explicit then {
      print_log("Key type isn't explicit");
-     set_aceerror(aceerrorType_bits(ACEE_InvalidValue));
+     if write_aceerror then {
+         set_aceerror(aceerrorType_bits(ACEE_InvalidValue));
+     };
      return true;
   };
 
@@ -464,14 +465,18 @@ function has_metadata_error(kd: lregidx) -> bool = {
   let state_number = acestatenumberType_bits(lrm[State_Number]);
   if state_number != ACESN_Initial then {
      print_log("State Number isn't initial");
-     set_aceerror(aceerrorType_bits(ACEE_InvalidValue));
+     if write_aceerror then {
+         set_aceerror(aceerrorType_bits(ACEE_InvalidValue));
+     };
      return true;
   };
 
   // Check metadata validity: algorithm is supported
   if not(is_algorithm_supported(lrm[Algorithm])) then {
      print_log("Failed algo check");
-     set_aceerror(aceerrorType_bits(ACEE_Unimplemented));
+     if write_aceerror then {
+         set_aceerror(aceerrorType_bits(ACEE_Unimplemented));
+     };
      return true;
   };
 
@@ -479,7 +484,9 @@ function has_metadata_error(kd: lregidx) -> bool = {
   let sc_protection = acescprotectionType_bits(lrm[SC_Protection]);
   if sc_protection != ACESC_NoProtection then {
      print_log("Failed SCProtection check");
-     set_aceerror(aceerrorType_bits(ACEE_InvalidValue));
+     if write_aceerror then {
+         set_aceerror(aceerrorType_bits(ACEE_InvalidValue));
+     };
      return true;
   };
 
@@ -496,7 +503,9 @@ function has_metadata_error(kd: lregidx) -> bool = {
   };
   if error then {
      print_log("Failed Privilege Level check");
-     set_aceerror(aceerrorType_bits(ACEE_Privilege));
+     if write_aceerror then {
+         set_aceerror(aceerrorType_bits(ACEE_Privilege));
+     };
      return true;
   };
 

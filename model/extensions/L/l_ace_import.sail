@@ -29,7 +29,7 @@ function clause execute ACEIMPORT(imm, xs, kd) = {
   // Reset `acestart` because there is nothing to restart
   set_acestart(zeros());
 
-  if has_metadata_error(kd) then {
+  if has_metadata_error(Lm(kd), true) then {
       return RETIRE_SUCCESS
   };
 
