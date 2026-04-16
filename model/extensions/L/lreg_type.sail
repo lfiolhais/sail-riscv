@@ -129,7 +129,8 @@ enum AceAlgorithmType = {
     ACEA_SHA2,
     ACEA_SHA3,
     ACEA_SM3,
-    ACEA_ASCON
+    ACEA_ASCON,
+    ACEA_INVALID,
 }
 
 mapping acealgorithmType_bits : AceAlgorithmType <-> bits(4) = {
@@ -141,6 +142,7 @@ mapping acealgorithmType_bits : AceAlgorithmType <-> bits(4) = {
   ACEA_SHA3    <-> 0b0101, // 5
   ACEA_SM3     <-> 0b0110, // 6
   ACEA_ASCON   <-> 0b0111, // 7
+  ACEA_INVALID <-> 0b1111, // 15
 }
 
 enum AceAlgorithmCipherModeType = {
@@ -156,6 +158,7 @@ enum AceAlgorithmCipherModeType = {
     ACEAM_C_CMAC,
     ACEAM_C_OCB,
     ACEAM_C_OCB_IV,
+    ACEAM_C_INVALID,
 }
 
 mapping acealgorithmCipherModeType_bits : AceAlgorithmCipherModeType <-> bits(5) = {
@@ -171,6 +174,7 @@ mapping acealgorithmCipherModeType_bits : AceAlgorithmCipherModeType <-> bits(5)
     ACEAM_C_CMAC    <-> 0b01001,
     ACEAM_C_OCB     <-> 0b01010,
     ACEAM_C_OCB_IV  <-> 0b01011,
+    ACEAM_C_INVALID <-> 0b11111,
 }
 
 enum AceAlgorithmHashModeType = {
@@ -190,6 +194,7 @@ enum AceAlgorithmHashModeType = {
     ACEAM_H_KMAC256,
     ACEAM_H_SHAKE128,
     ACEAM_H_SHAKE256,
+    ACEAM_H_INVALID,
 }
 
 mapping acealgorithmHashModeType_bits : AceAlgorithmHashModeType <-> bits(5) = {
@@ -209,6 +214,7 @@ mapping acealgorithmHashModeType_bits : AceAlgorithmHashModeType <-> bits(5) = {
     ACEAM_H_KMAC256      <-> 0b01101,
     ACEAM_H_SHAKE128     <-> 0b01110,
     ACEAM_H_SHAKE256     <-> 0b01111,
+    ACEAM_H_INVALID      <-> 0b11111,
 }
 
 enum AceSCProtectionType = {
