@@ -69,7 +69,7 @@ function clause execute ACEEXPORT(imm, xd, ks) = {
           set_acestart(to_bits_unsafe(16, i * llen_bytes + j * xlen_bytes + unsigned(offset)));
           let new_offset = offset + i * llen_bytes + j * xlen_bytes;
 
-          assert(j * xlen < llen - xlen);
+          assert(j * xlen <= llen - xlen);
           assert((j + 1) * xlen - 1 < llen);
           let data = k[(j + 1) * xlen - 1 .. j * xlen];
 
